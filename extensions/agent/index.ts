@@ -28,6 +28,14 @@ const DISABLE_ENV = "PI_AGENT_TOOL_DISABLED";
 const MAX_TASKS = 5;
 const MAX_CONCURRENCY = 5;
 
+// Default model priority: Bedrock Haiku → Codex Spark → Bedrock Sonnet → Codex Spark
+const DEFAULT_MODEL_PRIORITY = [
+	"amazon-bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0",
+	"openai-codex/gpt-4o",
+	"amazon-bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0",
+	"openai-codex/gpt-4o",
+];
+
 interface AgentConfig {
 	name: string;
 	description: string;
@@ -620,7 +628,26 @@ async function runChildAgent(params: {
 	onUpdate?: (details: AgentTaskDetails) => void;
 }): Promise<AgentTaskDetails> {
 	const { agent, prompt, cwd, description, index, signal, onUpdate } = params;
-	const candidateModels = agent.models && agent.models.length > 0 ? agent.models : agent.model ? [agent.model] : [undefined];
+	
+	// Create modelRegistry early to determine available models
+	const agentDir = getAgentDir();
+	const authStorage = AuthStorage.create(path.join(agentDir, "auth.json"));
+	const modelRegistry = new ModelRegistry(authStorage, path.join(agentDir, "models.json"));
+	
+	// Use agent-specified models, fall back to default priority list
+	let candidateModels: string[] = [];
+	if (agent.models && agent.models.length > 0) {
+		candidateModels = agent.models;
+	} else if (agent.model) {
+		candidateModels = [agent.model];
+	} else {
+		// Fall back to default priority, filtering only available providers
+		const availableModels = DEFAULT_MODEL_PRIORITY.filter((spec) => {
+			const resolved = resolveModelSpec(modelRegistry, spec);
+			return resolved !== undefined;
+		});
+		candidateModels = availableModels.length > 0 ? availableModels : [undefined];
+	}
 	const failures: string[] = [];
 	let lastResult: AgentTaskDetails | undefined;
 
