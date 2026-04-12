@@ -4,13 +4,15 @@ import path from "node:path";
 import type { AgentProviderId, LoopAttemptStatus } from "./types";
 
 export const EXTENSION_DIR = typeof __dirname === "string" ? __dirname : process.cwd();
-export const REPO_ROOT = path.resolve(EXTENSION_DIR, "..", "..", "..");
+const isInsidePiDir = typeof __dirname === "string" && __dirname.includes(path.sep + ".pi" + path.sep);
+export const REPO_ROOT = isInsidePiDir ? path.resolve(EXTENSION_DIR, "..", "..", "..") : process.cwd();
 export const ACTIVE_PLAN_DIR = path.join(REPO_ROOT, "docs", "exec-plans", "active");
 export const ACTIVE_PLAN_PREFIX = "docs/exec-plans/active";
 export const LOOP_STATE_DIR = path.join(REPO_ROOT, ".pi", "exec-plan-loop");
 export const LOOP_STATE_PATH = path.join(LOOP_STATE_DIR, "state.json");
 export const LOOP_ATTEMPTS_PATH = path.join(LOOP_STATE_DIR, "attempts.ndjson");
 export const LOOP_EVENTS_PATH = path.join(LOOP_STATE_DIR, "events.ndjson");
+export const LOOP_STEERING_PATH = path.join(LOOP_STATE_DIR, "steering.md");
 export const MAX_STATUS_LINES = 6;
 export const MAX_TOOL_ERRORS = 3;
 export const MAX_TEXT_LENGTH = 280;
