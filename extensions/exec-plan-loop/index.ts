@@ -14,7 +14,7 @@ import {
 import { switchToFallbackModel, getRecoveryState, withActiveModel } from "./models";
 import { listActivePlans } from "./plans";
 import { buildLoopPrompt } from "./prompt";
-import { advanceState, appendAttemptLog, appendEventLog, createBaselineState, getGitSnapshot, loadLoopStateWithStatus, saveLoopState } from "./state";
+import { advanceState, appendAttemptLog, appendEventLog, createBaselineState, ensureSteeringFile, getGitSnapshot, loadLoopStateWithStatus, saveLoopState } from "./state";
 import type { AgentOutcome, LoopEvent, LoopRecoveryState, LoopState } from "./types";
 import { isRecord, modelToSpec, summarizeAgentOutcome, summarizePlanPaths, summarizePlans, truncate } from "./utils";
 
@@ -460,6 +460,7 @@ export default function execPlanLoop(pi: ExtensionAPI) {
 				};
 				await saveLoopState(state);
 				await appendEventLog({ type: "loop_resume", runTag: state.runTag, iteration: state.iteration, activePlans: state.plans.activePaths });
+				await ensureSteeringFile();
 				const toolChange = syncLoopToolAvailability(pi, true);
 				logToolAvailabilityChange(toolChange, true);
 				notifyLoopToolAvailabilityChange(ctx, toolChange);
@@ -480,6 +481,7 @@ export default function execPlanLoop(pi: ExtensionAPI) {
 			const git = await getGitSnapshot(pi);
 			state = createBaselineState(plans, git, extraInstructions, modelToSpec(ctx.model));
 			await saveLoopState(state);
+			await ensureSteeringFile();
 			await appendAttemptLog(state);
 			await appendEventLog({
 				type: "loop_start",

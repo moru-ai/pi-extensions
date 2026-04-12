@@ -3,13 +3,24 @@ import path from "node:path";
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-import { LOOP_ATTEMPTS_PATH, LOOP_EVENTS_PATH, LOOP_STATE_DIR, LOOP_STATE_PATH, MAX_STATUS_LINES, REPO_ROOT } from "./constants";
+import { LOOP_ATTEMPTS_PATH, LOOP_EVENTS_PATH, LOOP_STATE_DIR, LOOP_STATE_PATH, LOOP_STEERING_PATH, MAX_STATUS_LINES, REPO_ROOT } from "./constants";
 import { createDefaultRecoveryState } from "./models";
 import type { AgentOutcome, GitSnapshot, LoadLoopStateResult, LoopEvent, LoopRecoveryState, LoopState } from "./types";
 import { isLoopState, summarizePlans } from "./utils";
 
 async function ensureLoopStateDir(): Promise<void> {
 	await fs.mkdir(LOOP_STATE_DIR, { recursive: true });
+}
+
+const DEFAULT_STEERING = "# Steering\n\nNo additional steering instructions at this time. Continue with the active exec plan.\n";
+
+export async function ensureSteeringFile(): Promise<void> {
+	await ensureLoopStateDir();
+	try {
+		await fs.access(LOOP_STEERING_PATH);
+	} catch {
+		await fs.writeFile(LOOP_STEERING_PATH, DEFAULT_STEERING, "utf8");
+	}
 }
 
 async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
