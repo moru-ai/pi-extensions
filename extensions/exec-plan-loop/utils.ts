@@ -72,7 +72,7 @@ export function isLoopAttemptStatus(value: unknown): value is LoopAttemptStatus 
 export function isProviderCursorState(value: unknown): value is ProviderCursorState {
 	if (!isRecord(value)) return false;
 	for (const [key, rawIndex] of Object.entries(value)) {
-		if (key !== "anthropic" && key !== "openai-codex") return false;
+		if (key !== "amazon-bedrock" && key !== "openai-codex" && key !== "anthropic") return false;
 		if (typeof rawIndex !== "number" || !Number.isInteger(rawIndex) || rawIndex < 0) return false;
 	}
 	return true;

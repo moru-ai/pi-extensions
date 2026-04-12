@@ -20,7 +20,7 @@ export type DependencyAnalysis = {
 
 export type LoopAttemptStatus = "baseline" | "progress" | "error" | "stopped";
 
-export type AgentProviderId = "anthropic" | "openai-codex";
+export type AgentProviderId = "amazon-bedrock" | "openai-codex";
 
 export type ProviderCursorState = Partial<Record<AgentProviderId, number>>;
 

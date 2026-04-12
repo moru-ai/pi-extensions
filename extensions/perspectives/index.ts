@@ -17,8 +17,9 @@ import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 
 const DEFAULT_MODELS = [
-	"anthropic/claude-opus-4-6:high",
+	"amazon-bedrock/global.anthropic.claude-opus-4-6-v1:high",
 	"openai-codex/gpt-5.4:high",
+	"amazon-bedrock/global.anthropic.claude-sonnet-4-6:high",
 ];
 const PERSPECTIVES_TOOLS = "read,bash,grep,find,ls";
 

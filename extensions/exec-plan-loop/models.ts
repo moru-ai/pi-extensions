@@ -6,7 +6,7 @@ import { parseModelSpec } from "./utils";
 
 function createDefaultProviderCursors(): ProviderCursorState {
 	return {
-		"anthropic": 0,
+		"amazon-bedrock": 0,
 		"openai-codex": 0,
 	};
 }
@@ -69,8 +69,8 @@ function getProviderFromModelSpec(modelSpec: string | null): AgentProviderId | n
 }
 
 function getAlternateProvider(currentProvider: AgentProviderId | null): AgentProviderId {
-	if (currentProvider === "openai-codex") return "anthropic";
-	if (currentProvider === "anthropic") return "openai-codex";
+	if (currentProvider === "openai-codex") return "amazon-bedrock";
+	if (currentProvider === "amazon-bedrock") return "openai-codex";
 	return "openai-codex";
 }
 

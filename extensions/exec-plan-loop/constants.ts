@@ -18,12 +18,12 @@ export const LOOP_ATTEMPT_STATUSES: readonly LoopAttemptStatus[] = ["baseline", 
 export const ASK_USER_QUESTION_TOOL = "ask_user_question";
 export const AGENT_PROVIDER_ERROR_RETRY_LIMIT = 3;
 export const SEND_MESSAGE_WATCHDOG_MS = 15_000;
-export const AGENT_PROVIDER_IDS: readonly AgentProviderId[] = ["openai-codex", "anthropic"];
+export const AGENT_PROVIDER_IDS: readonly AgentProviderId[] = ["openai-codex", "amazon-bedrock"];
 export const AGENT_PROVIDER_MODEL_ORDER: Record<AgentProviderId, string[]> = {
-	"anthropic": [
-		"claude-opus-4-6",
-		"claude-sonnet-4-6",
-		"claude-opus-4-5",
+	"amazon-bedrock": [
+		"global.anthropic.claude-opus-4-6-v1",
+		"global.anthropic.claude-sonnet-4-6",
+		"global.anthropic.claude-haiku-4-5-20251001-v1:0",
 	],
 	"openai-codex": [
 		"gpt-5.4",
@@ -34,8 +34,9 @@ export const AGENT_PROVIDER_MODEL_ORDER: Record<AgentProviderId, string[]> = {
 export const COMPACT_THRESHOLD_PERCENT = 0.9;
 export const COMPACT_BASE_DELAY_MS = 2_000;
 export const COMPACT_MODELS: string[] = [
-	"anthropic/claude-sonnet-4-6",
-	"anthropic/claude-opus-4-6",
+	"amazon-bedrock/global.anthropic.claude-sonnet-4-6",
+	"amazon-bedrock/global.anthropic.claude-opus-4-6-v1",
+	"amazon-bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0",
 	"openai-codex/gpt-5.4",
 	"openai-codex/gpt-5.2",
 ];
