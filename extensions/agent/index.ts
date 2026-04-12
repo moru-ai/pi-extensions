@@ -31,9 +31,9 @@ const MAX_CONCURRENCY = 5;
 // Default model priority: Bedrock Haiku → Codex Spark → Bedrock Sonnet → Codex Spark
 const DEFAULT_MODEL_PRIORITY = [
 	"amazon-bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0",
-	"openai-codex/gpt-4o",
+	"openai-codex/gpt-5.3-codex-spark",
 	"amazon-bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0",
-	"openai-codex/gpt-4o",
+	"openai-codex/gpt-5.3-codex-spark",
 ];
 
 interface AgentConfig {
