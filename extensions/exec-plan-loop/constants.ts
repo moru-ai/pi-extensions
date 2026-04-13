@@ -4,8 +4,38 @@ import path from "node:path";
 import type { AgentProviderId, LoopAttemptStatus } from "./types";
 
 export const EXTENSION_DIR = typeof __dirname === "string" ? __dirname : process.cwd();
-const isInsidePiDir = typeof __dirname === "string" && __dirname.includes(path.sep + ".pi" + path.sep);
-export const REPO_ROOT = isInsidePiDir ? path.resolve(EXTENSION_DIR, "..", "..", "..") : process.cwd();
+
+/**
+ * Resolve REPO_ROOT to the worktree pi is running in.
+ *
+ * When pi-extensions are installed globally (~/.pi/agent/git/...), __dirname
+ * points inside the global package — NOT the target worktree. Walking up from
+ * __dirname lands in the wrong directory entirely. The reliable source of truth
+ * for the repo root is process.cwd(), which pi sets to the worktree on launch.
+ *
+ * We only fall back to __dirname-relative resolution when the extension lives
+ * inside a repo-local .pi directory (i.e. <repo>/.pi/extensions/exec-plan-loop).
+ */
+function resolveRepoRoot(): string {
+	if (typeof __dirname !== "string") return process.cwd();
+
+	const piSegment = path.sep + ".pi" + path.sep;
+	const piIndex = __dirname.indexOf(piSegment);
+	if (piIndex === -1) return process.cwd();
+
+	// Check whether .pi is a global install (~/.pi/agent/git/...) or repo-local.
+	// Global installs have the .pi at the user home level and contain "agent/git".
+	const afterPi = __dirname.slice(piIndex + piSegment.length);
+	if (afterPi.startsWith("agent" + path.sep + "git")) {
+		// Global install — __dirname is meaningless for repo root.
+		return process.cwd();
+	}
+
+	// Repo-local .pi: the repo root is the directory containing .pi.
+	return __dirname.slice(0, piIndex);
+}
+
+export const REPO_ROOT = resolveRepoRoot();
 export const ACTIVE_PLAN_DIR = path.join(REPO_ROOT, "docs", "exec-plans", "active");
 export const ACTIVE_PLAN_PREFIX = "docs/exec-plans/active";
 export const LOOP_STATE_DIR = path.join(REPO_ROOT, ".pi", "exec-plan-loop");
