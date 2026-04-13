@@ -587,6 +587,7 @@ ${result.errorMessage ?? ""}`.toLowerCase();
 		"unknown model",
 		"model not found",
 		"unsupported model",
+		"not supported",
 		"authentication",
 		"unauthorized",
 		"forbidden",

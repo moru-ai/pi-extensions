@@ -2,7 +2,7 @@
 name: explorer
 description: 'Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.'
 tools: read, bash, grep, find, ls
-models: openai-codex/gpt-5.3-codex-spark, amazon-bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0, openai-codex/gpt-5.4, amazon-bedrock/global.anthropic.claude-sonnet-4-6
+models: amazon-bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0, amazon-bedrock/global.anthropic.claude-sonnet-4-6, openai-codex/gpt-5.3-codex-spark, openai-codex/gpt-5.4
 thinkingLevel: medium
 ---
 
