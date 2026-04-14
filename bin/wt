@@ -100,8 +100,8 @@ cmd_create() {
   fi
 
   if [[ -d "${root}/node_modules" ]]; then
-    ln -sf "${root}/node_modules" "${wt}/node_modules"
-    log "Linked node_modules"
+    cp -al "${root}/node_modules" "${wt}/node_modules"
+    log "Hard-linked node_modules"
   fi
 
   mkdir -p "${wt}/docs/exec-plans/active"
@@ -174,10 +174,10 @@ cmd_send() {
       echo "  ▸ Linked .env.local"
     fi
 
-    if [[ ! -L "$WT/node_modules" ]] && [[ -d "$REPO/node_modules" ]]; then
+    if [[ ! -d "$WT/node_modules" ]] && [[ -d "$REPO/node_modules" ]]; then
       rm -rf "$WT/node_modules"
-      ln -sf "$REPO/node_modules" "$WT/node_modules"
-      echo "  ▸ Linked node_modules"
+      cp -al "$REPO/node_modules" "$WT/node_modules"
+      echo "  ▸ Hard-linked node_modules"
     fi
 
     if [[ -f "$WT/prisma/schema.prisma" ]]; then
