@@ -1,8 +1,11 @@
 {
   "name": "@moru-ai/pi-extensions",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared pi extensions, agents, and prompts for the Moru team",
   "keywords": ["pi-package"],
+  "bin": {
+    "wt": "./bin/wt"
+  },
   "pi": {
     "extensions": ["./extensions"],
     "prompts": ["./prompts"]

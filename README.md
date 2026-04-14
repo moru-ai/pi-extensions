@@ -46,12 +46,29 @@ pi update
 | Prompt | Description |
 |--------|-------------|
 | `perspectives` | Perspectives deliberation prompt template |
+| `kickoff` | Start a new workstream — gather requirements, create worktree, write exec plan |
+
+### CLI Tools
+
+| Tool | Description |
+|------|-------------|
+| `wt` | Worktree management with optional remote sync |
+
+**Setup:** Run `/setup-wt` in pi, or manually:
+```bash
+ln -sf $(pi resolve @moru-ai/pi-extensions)/bin/wt ~/bin/wt
+
+# For remote sync (optional):
+export WT_REMOTE_HOST=mac-mini
+export WT_REMOTE_USER=vacatio
+```
 
 ## Structure
 
 ```
 pi-extensions/
 ├── package.json
+├── bin/                  ← CLI tools (wt)
 ├── extensions/           ← pi loads these as extensions
 ├── agents/               ← read by agent extension (relative path)
 ├── perspectives-prompts/ ← read by perspectives extension (relative path)
