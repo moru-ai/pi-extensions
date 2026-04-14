@@ -33,7 +33,7 @@ function getPromptsDir(): string {
 const INVESTIGATOR_SYSTEM_PROMPT = () => path.join(getPromptsDir(), "investigator.md");
 const CRITIC_SYSTEM_PROMPT = () => path.join(getPromptsDir(), "critic.md");
 const EDITOR_SYSTEM_PROMPT = () => path.join(getPromptsDir(), "editor.md");
-const WEBSEARCH_EXTENSION = ".pi/extensions/websearch/index.ts";
+const WEBSEARCH_EXTENSION = path.resolve(getExtensionDir(), "..", "websearch", "index.ts");
 
 // ── Types ──────────────────────────────────────────────────────────
 
