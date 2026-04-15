@@ -4,7 +4,7 @@ set -euo pipefail
 # ─── Config (override via env) ───────────────────────────────
 WT_REMOTE_HOST="${WT_REMOTE_HOST:-}"
 WT_REMOTE_USER="${WT_REMOTE_USER:-$(whoami)}"
-WT_LOCAL_BASE="${WT_LOCAL_BASE:-/private/tmp}"
+WT_LOCAL_BASE="${WT_LOCAL_BASE:-$HOME/wt}"
 
 # Colors
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -367,18 +367,18 @@ Usage:
   wt clean <name> [local|remote|both]
 
 Naming:
-  Local:     ${WT_LOCAL_BASE:-/private/tmp}/wt-<name>/
+  Local:     ${WT_LOCAL_BASE:-~/wt}/wt-<name>/
   Remote:    ~/<repo>-wt/<name>/
   Branch:    plan/<name>  (default)
 
 Environment:
   WT_REMOTE_HOST    Remote host for send/sync (e.g. mac-mini)
   WT_REMOTE_USER    Remote user (default: \$(whoami))
-  WT_LOCAL_BASE     Local worktree base dir (default: /private/tmp)
+  WT_LOCAL_BASE     Local worktree base dir (default: ~/wt)
 
 Workflow:
   wt create agent-chat            # 1. Create local worktree
-  cd ${WT_LOCAL_BASE:-/private/tmp}/wt-agent-chat
+  cd ${WT_LOCAL_BASE:-~/wt}/wt-agent-chat
   # Write plan, code, test
   git add -A && git commit -m "plan: agent-chat"
   wt send agent-chat              # 2. Push + setup on remote
