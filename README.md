@@ -54,14 +54,17 @@ pi update
 |------|-------------|
 | `wt` | Worktree management with optional remote sync |
 
-**Setup:** Run `/setup-wt` in pi, or manually:
+**Setup:** Add to `~/.zshrc`:
 ```bash
-ln -sf $(pi resolve @moru-ai/pi-extensions)/bin/wt ~/bin/wt
+# pi-extensions CLI tools
+export PATH="$HOME/pi-extensions/bin:$PATH"
 
-# For remote sync (optional):
+# wt remote sync (optional — for mac-mini workflow)
 export WT_REMOTE_HOST=mac-mini
 export WT_REMOTE_USER=vacatio
 ```
+
+Worktrees are created at `~/wt/wt-<name>/` by default. Override with `WT_LOCAL_BASE`.
 
 ## Structure
 
