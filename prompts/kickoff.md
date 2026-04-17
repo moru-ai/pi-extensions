@@ -61,12 +61,12 @@ cmux rename-tab --tab "$(cmux identify | jq -r .caller.tab_ref)" '<name>'
 
 Move into the worktree:
 ```bash
-cd /private/tmp/wt-<name>/
+cd ~/wt/wt-<name>/
 ```
 
 ## Phase 5: Write Exec Plan
 
-Read `PLANS.md` for the exec plan format rules. Write the plan to:
+Write the exec plan to:
 ```
 docs/exec-plans/active/<name>.md
 ```
@@ -79,7 +79,7 @@ The plan must be:
 
 ## Phase 6: Create Artifact HTML
 
-Read `docs/exec-plans/index.md` for artifact rules. Create:
+Create a summary artifact:
 ```
 docs/exec-plans/artifacts/<name>-summary.html
 ```

@@ -1,22 +1,22 @@
 ---
 name: wt
-description: "Worktree management for mac-mini exec-plan workflow. Creates local worktrees, syncs to mac-mini with env/deps setup. Use when asked to create a worktree, send code to mac-mini, sync branches, list worktrees, or clean up old worktrees."
+description: "Worktree management for worker exec-plan workflow. Creates local worktrees, syncs to workers with env/deps setup. Use when asked to create a worktree, send code to a worker, sync branches, list worktrees, or clean up old worktrees."
 metadata:
   author: omin
   version: "1.0.0"
 allowed-tools: Bash(wt:*), Bash(git:*), Bash(ssh:*)
 ---
 
-# wt — Worktree → mac-mini exec-plan workflow
+# wt — Worktree → worker exec-plan workflow
 
-Manages git worktrees locally and on mac-mini for exec-plan-loop execution.
+Manages git worktrees locally and on workers (Mac minis) for exec-plan-loop execution.
 
 ## Naming Convention
 
 | Location | Pattern | Example |
 |----------|---------|---------|
 | Local | `~/wt/wt-<name>/` | `~/wt/wt-agent-chat/` |
-| Mac-mini | `~/<repo>-wt/<name>/` | `~/ai-company-wt/agent-chat/` |
+| Worker | `~/<repo>-wt/<name>/` | `~/ai-company-wt/agent-chat/` |
 | Branch | `plan/<name>` (default) | `plan/agent-chat` |
 
 The repo name is auto-detected from `git remote`. Multi-repo safe — each repo gets its own `<repo>-wt/` directory.
@@ -34,14 +34,16 @@ cd ~/wt/wt-agent-chat
 # 3. Commit
 git add -A && git commit -m "plan: agent-chat"
 
-# 4. Send to mac-mini (push + worktree + env setup)
+# 4. Send to worker (push + worktree + env setup)
 wt send agent-chat
 
-# 5. Start execution on mac-mini
-ssh mac-mini
+# 5. Start execution on worker
+ssh worker-1
 cd ~/ai-company-wt/agent-chat
 pi  # → /start-exec-plan-loop
 ```
+
+> **Tip:** To send to worker-2 instead: `wt send agent-chat -w worker-2`
 
 ## Commands
 
@@ -59,12 +61,12 @@ wt create pod-refactor develop    # branch: plan/pod-refactor, base: develop
 wt create fix-login -b fix/login  # use custom branch name
 ```
 
-### `wt send <name>`
+### `wt send <name> [-w <host>]`
 
-Pushes the branch and sets up a worktree on mac-mini.
+Pushes the branch and sets up a worktree on the remote worker.
 
 Setup includes:
-- `git fetch` + `git worktree add` on mac-mini
+- `git fetch` + `git worktree add` on worker
 - Symlink `.env.local` from the main repo
 - Symlink `node_modules` from the main repo
 - `npx prisma generate`
@@ -72,22 +74,22 @@ Setup includes:
 ```bash
 wt send agent-chat
 # → pushes plan/agent-chat
-# → creates ~/ai-company-wt/agent-chat/ on mac-mini
+# → creates ~/ai-company-wt/agent-chat/ on worker
 # → ready for pi exec-plan-loop
 ```
 
-### `wt sync <name>`
+### `wt sync <name> [-w <host>]`
 
 Quick push + pull without full setup. Use for incremental updates after the initial `send`.
 
 ```bash
 wt sync agent-chat
-# → git push + git reset --hard origin/branch on mac-mini
+# → git push + git reset --hard origin/branch on worker
 ```
 
 ### `wt list`
 
-Shows all worktrees locally and on mac-mini. Legacy worktrees (old naming conventions) are shown separately.
+Shows all worktrees locally and on the remote worker. Legacy worktrees (old naming conventions) are shown separately.
 
 ```bash
 wt list
@@ -102,14 +104,14 @@ wt list
 #   ~/ai-company-cs/ → cs/context-gather-ui
 ```
 
-### `wt clean <name> [local|remote|both]`
+### `wt clean <name> [local|remote|both] [-w <host>]`
 
-Removes a worktree. Default: `both` (local + mac-mini).
+Removes a worktree. Default: `both` (local + worker).
 
 ```bash
-wt clean agent-chat           # remove from both local and mac-mini
+wt clean agent-chat           # remove from both local and worker
 wt clean agent-chat local     # local only
-wt clean agent-chat remote    # mac-mini only
+wt clean agent-chat remote    # worker only
 ```
 
 ## Setup
@@ -120,12 +122,24 @@ The `wt` CLI is shipped via `pi-extensions`. Add to `~/.zshrc`:
 # pi-extensions CLI tools
 export PATH="$HOME/pi-extensions/bin:$PATH"
 
-# wt remote sync (for mac-mini workflow)
-export WT_REMOTE_HOST=mac-mini
+# wt remote sync (default worker)
+export WT_REMOTE_HOST=worker-1
 export WT_REMOTE_USER=vacatio
 ```
 
 Worktrees are created at `~/wt/wt-<name>/` by default. Override with `WT_LOCAL_BASE`.
+
+### Multi-worker
+
+Use `--worker` / `-w` to target a specific worker:
+
+```bash
+wt send agent-chat                # → default (worker-1)
+wt send agent-chat -w worker-2    # → worker-2
+wt sync agent-chat -w worker-2
+wt list -w worker-2
+wt clean agent-chat -w worker-2
+```
 
 ## Script Location
 

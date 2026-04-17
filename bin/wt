@@ -118,10 +118,20 @@ cmd_create() {
 
 # ─── send (requires remote) ──────────────────────────────────
 cmd_send() {
+  local name=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --worker|-w) WT_REMOTE_HOST="$2"; shift 2 ;;
+      -*) err "Unknown flag: $1"; exit 1 ;;
+      *) name="$1"; shift ;;
+    esac
+  done
+
   require_remote
-  local name="${1:-}"
+
   if [[ -z "$name" ]]; then
-    err "Usage: wt send <name>"
+    err "Usage: wt send <name> [-w <host>]"
     exit 1
   fi
 
@@ -202,10 +212,20 @@ REMOTE
 
 # ─── sync (requires remote) ──────────────────────────────────
 cmd_sync() {
+  local name=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --worker|-w) WT_REMOTE_HOST="$2"; shift 2 ;;
+      -*) err "Unknown flag: $1"; exit 1 ;;
+      *) name="$1"; shift ;;
+    esac
+  done
+
   require_remote
-  local name="${1:-}"
+
   if [[ -z "$name" ]]; then
-    err "Usage: wt sync <name>"
+    err "Usage: wt sync <name> [-w <host>]"
     exit 1
   fi
 
@@ -236,6 +256,13 @@ REMOTE
 
 # ─── list ────────────────────────────────────────────────────
 cmd_list() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --worker|-w) WT_REMOTE_HOST="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
   local repo; repo=$(repo_name)
 
   echo -e "${BLUE}Local${NC}"
@@ -299,11 +326,21 @@ REMOTE
 
 # ─── clean ───────────────────────────────────────────────────
 cmd_clean() {
-  local name="${1:-}"
-  local target="${2:-both}"
+  local name="" target="both"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --worker|-w) WT_REMOTE_HOST="$2"; shift 2 ;;
+      -*) err "Unknown flag: $1"; exit 1 ;;
+      *)
+        if [[ -z "$name" ]]; then name="$1";
+        else target="$1"; fi
+        shift ;;
+    esac
+  done
 
   if [[ -z "$name" ]]; then
-    err "Usage: wt clean <name> [local|remote|both]"
+    err "Usage: wt clean <name> [local|remote|both] [-w <host>]"
     exit 1
   fi
 
@@ -350,8 +387,8 @@ case "${1:-help}" in
   create) shift; cmd_create "$@" ;;
   send)   shift; cmd_send "$@" ;;
   sync)   shift; cmd_sync "$@" ;;
-  list)   cmd_list ;;
-  ls)     cmd_list ;;
+  list)   shift; cmd_list "$@" ;;
+  ls)     shift; cmd_list "$@" ;;
   clean)  shift; cmd_clean "$@" ;;
   rm)     shift; cmd_clean "$@" ;;
   help|-h|--help)
@@ -361,10 +398,10 @@ wt — Worktree management with optional remote sync
 Usage:
   wt create <name> [base]         Create local worktree + plan/<name> branch
   wt create <name> -b <branch>    Use existing/custom branch name
-  wt send <name>                  Push + setup worktree on remote
-  wt sync <name>                  Quick push + pull (no setup)
-  wt list                         Show all worktrees
-  wt clean <name> [local|remote|both]
+  wt send <name> [-w <host>]      Push + setup worktree on remote
+  wt sync <name> [-w <host>]      Quick push + pull (no setup)
+  wt list [-w <host>]             Show all worktrees
+  wt clean <name> [local|remote|both] [-w <host>]
 
 Naming:
   Local:     ${WT_LOCAL_BASE:-~/wt}/wt-<name>/
@@ -372,7 +409,7 @@ Naming:
   Branch:    plan/<name>  (default)
 
 Environment:
-  WT_REMOTE_HOST    Remote host for send/sync (e.g. mac-mini)
+  WT_REMOTE_HOST    Default remote host (overridden by -w)
   WT_REMOTE_USER    Remote user (default: \$(whoami))
   WT_LOCAL_BASE     Local worktree base dir (default: ~/wt)
 
@@ -381,7 +418,8 @@ Workflow:
   cd ${WT_LOCAL_BASE:-~/wt}/wt-agent-chat
   # Write plan, code, test
   git add -A && git commit -m "plan: agent-chat"
-  wt send agent-chat              # 2. Push + setup on remote
+  wt send agent-chat              # 2. Push + setup on default worker
+  wt send agent-chat -w worker-2  #    Or target a specific worker
 EOF
     ;;
   *)

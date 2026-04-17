@@ -59,12 +59,14 @@ pi update
 # pi-extensions CLI tools
 export PATH="$HOME/pi-extensions/bin:$PATH"
 
-# wt remote sync (optional — for mac-mini workflow)
-export WT_REMOTE_HOST=mac-mini
+# wt remote sync (default worker)
+export WT_REMOTE_HOST=worker-1
 export WT_REMOTE_USER=vacatio
 ```
 
 Worktrees are created at `~/wt/wt-<name>/` by default. Override with `WT_LOCAL_BASE`.
+
+Target a specific worker with `-w`: `wt send my-feature -w worker-2`
 
 ## Structure
 
