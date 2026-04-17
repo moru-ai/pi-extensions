@@ -86,7 +86,26 @@ ssh worker-1 "hostname"
 ssh worker-2 "hostname"
 ```
 
-### 2.3 Install Pi + Extensions
+### 2.3 Pi System Prompt
+
+Copy the shared system prompt to your local Mac and both workers:
+
+```bash
+# Create pi config directory
+mkdir -p ~/.pi/agent
+
+# Download the shared system prompt
+curl -fsSL https://raw.githubusercontent.com/moru-ai/pi-extensions/main/docs/APPEND_SYSTEM.md \
+  -o ~/.pi/agent/APPEND_SYSTEM.md
+
+# Also copy to workers (after worker setup is done)
+scp ~/.pi/agent/APPEND_SYSTEM.md worker-1:~/.pi/agent/APPEND_SYSTEM.md
+scp ~/.pi/agent/APPEND_SYSTEM.md worker-2:~/.pi/agent/APPEND_SYSTEM.md
+```
+
+This gives pi context about: workers, moruclaw, wt workflow, kickoff process, and coding conventions.
+
+### 2.4 Install Pi + Extensions
 
 ```bash
 # Install pi (requires Node.js 22+)
@@ -101,7 +120,7 @@ export WT_REMOTE_HOST=worker-1
 export WT_REMOTE_USER=<YOUR_USERNAME>
 ```
 
-### 2.4 Pi Auth
+### 2.5 Pi Auth
 
 ```bash
 pi auth
