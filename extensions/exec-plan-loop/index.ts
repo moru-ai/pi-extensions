@@ -16,7 +16,7 @@ import { listActivePlans } from "./plans";
 import { buildLoopPrompt } from "./prompt";
 import { advanceState, appendAttemptLog, appendEventLog, createBaselineState, ensureSteeringFile, getGitSnapshot, loadLoopStateWithStatus, saveLoopState } from "./state";
 import type { AgentOutcome, LoopEvent, LoopRecoveryState, LoopState } from "./types";
-import { isRecord, modelToSpec, summarizeAgentOutcome, summarizePlanPaths, summarizePlans, truncate } from "./utils";
+import { isRecord, modelToSpec, parseModelSpec, summarizeAgentOutcome, summarizePlanPaths, summarizePlans, truncate } from "./utils";
 
 function getModelContextWindow(model: unknown): number | null {
 	if (!isRecord(model)) return null;
@@ -600,6 +600,21 @@ export default function execPlanLoop(pi: ExtensionAPI) {
 						consecutiveErrors: consecutiveProviderErrors,
 						reason: `${consecutiveProviderErrors} consecutive provider-only errors`,
 					});
+					// Model-downshift compaction: if new model has a smaller context
+					// window, trigger compaction so the conversation fits.
+					const oldCw = getModelContextWindow(ctx.model);
+					const newParts = parseModelSpec(switchResult.modelSpec);
+					const newModel = newParts ? ctx.modelRegistry.find(newParts.provider, newParts.modelId) : null;
+					const newCw = newModel ? getModelContextWindow(newModel) : null;
+					if (oldCw !== null && newCw !== null && newCw < oldCw) {
+						const downshiftUsage = ctx.getContextUsage();
+						if (downshiftUsage && downshiftUsage.tokens !== null && downshiftUsage.tokens > newCw * COMPACT_THRESHOLD_PERCENT) {
+							fireAndForgetEventLog({ type: "compaction_start", model: switchResult.modelSpec, attempt: 0, contextUsagePercent: Math.round((downshiftUsage.tokens / newCw) * 100) });
+							if (ctx.hasUI) ctx.ui.notify(`Model downshift ${currentModelSpec} → ${switchResult.modelSpec}: compacting to fit smaller context window`, "info");
+							compactionAttempt = 0;
+							triggerCompaction(ctx);
+						}
+					}
 					continuationMode = `plain continue after model switch to ${switchResult.modelSpec}`;
 					if (ctx.hasUI) ctx.ui.notify(`Exec-plan loop switched models after ${consecutiveProviderErrors} consecutive provider-only errors: ${currentModelSpec ?? "unknown"} -> ${switchResult.modelSpec}`, "warning");
 				} else {
@@ -654,13 +669,20 @@ export default function execPlanLoop(pi: ExtensionAPI) {
 			model: state.recovery?.activeModel ?? null,
 			summary: state.lastTurn.summary,
 		});
-		if (outcome.shouldSendPlainContinue) sendMessageWithWatchdog("continue", { deliverAs: "followUp" });
-		else sendMessageWithWatchdog(buildLoopPrompt(plans, state), { deliverAs: "followUp" });
-		await appendEventLog({
-			type: "send_follow_up",
-			mode: outcome.shouldSendPlainContinue ? "plain_continue" : "full_prompt",
-			iteration: state.iteration,
-		});
+		// Pre-turn compaction: if context is over threshold, compact before sending
+		// the next message. triggerCompaction's onComplete will resume the loop.
+		const preUsage = ctx.getContextUsage();
+		if (preUsage && preUsage.tokens !== null && preUsage.contextWindow > 0 && preUsage.tokens > preUsage.contextWindow * COMPACT_THRESHOLD_PERCENT) {
+			compactionAttempt = 0;
+			await appendEventLog({ type: "send_follow_up", mode: "pre_turn_compact", iteration: state.iteration });
+			triggerCompaction(ctx);
+		} else if (outcome.shouldSendPlainContinue) {
+			sendMessageWithWatchdog("continue", { deliverAs: "followUp" });
+			await appendEventLog({ type: "send_follow_up", mode: "plain_continue", iteration: state.iteration });
+		} else {
+			sendMessageWithWatchdog(buildLoopPrompt(plans, state), { deliverAs: "followUp" });
+			await appendEventLog({ type: "send_follow_up", mode: "full_prompt", iteration: state.iteration });
+		}
 		if (ctx.hasUI) {
 			const level = outcome.status === "error" ? "warning" : "info";
 			ctx.ui.notify(`Exec-plan loop continuing (#${state.iteration}) from checkpoint ${state.repo.checkpointSha}: ${state.plans.lastSeenSummary}. Last result: ${outcome.status}. Next step: ${continuationMode}. Use /stop-exec-plan-loop to terminate it manually.`, level);

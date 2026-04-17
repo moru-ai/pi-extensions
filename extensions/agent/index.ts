@@ -493,7 +493,7 @@ async function runChildAgentAttempt(params: {
 					return !blockedExtensionFragments.some((fragment) => extensionPath.includes(fragment));
 				}),
 			}),
-			...(agent.systemPrompt ? { appendSystemPrompt: agent.systemPrompt } : {}),
+			...(agent.systemPrompt ? { appendSystemPrompt: [agent.systemPrompt] } : {}),
 		});
 		await resourceLoader.reload();
 
