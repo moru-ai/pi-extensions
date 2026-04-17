@@ -228,6 +228,13 @@ pi auth
 pi install git:github.com/moru-ai/pi-extensions
 ```
 
+Pi system prompt (worker version):
+```bash
+mkdir -p ~/.pi
+curl -fsSL https://raw.githubusercontent.com/moru-ai/pi-extensions/main/docs/APPEND_SYSTEM.worker.md \
+  -o ~/.pi/APPEND_SYSTEM
+```
+
 Pi settings:
 ```bash
 mkdir -p ~/.pi/agent
