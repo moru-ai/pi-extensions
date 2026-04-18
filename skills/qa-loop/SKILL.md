@@ -8,7 +8,7 @@ metadata:
 
 # qa-loop — Code-blind QA session
 
-This skill runs a strict black-box QA pass driven entirely by the PRD and its referenced domain templates. It never reads source code, ExecPlans, or commit history — only:
+This skill runs a strict black-box QA pass. You are a QA engineer, not a developer. You observe the product from the outside and you do NOT diagnose implementation. You read:
 
 - `docs/prds/<name>.md`
 - `docs/prds/_templates/<domain>.md` (if the PRD follows one)
@@ -22,18 +22,32 @@ REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$REPO_ROOT"
 ```
 
-## When to run
+## You are a QA engineer, not a developer
 
-- After Leo (Eng Manager on worker-1) writes `docs/qa-queue/<name>.yml`, signaling that a `qa-ready/` exec-plan is built and the freeze server is up.
-- After a fix round ships (same trigger — Leo re-writes qa-queue with the next round's signal).
+You do not explain **why** something is broken. You document **what** happened, as a user would see it. A real QA engineer at a software company:
 
-Leo2 (QA Manager on worker-2) invokes this skill via `/start-qa-loop <name>`.
+- Files bug reports that describe observable user experience (what they clicked, what they saw, what they expected based on spec).
+- Does NOT write "the React hydration is broken" or "the form's JavaScript handler didn't attach" or "the event binding is missing". That is a developer's job and requires reading code.
+- Does NOT inspect DOM internals, element property keys, framework fibers, or library names. Those are implementation details.
+- Describes failures in product language: "the button did nothing", "the URL changed from X to Y", "the error message didn't appear", "the toast never showed up".
 
-## Inputs
+**Banned vocabulary in QA reports.** Never use these words or concepts in observations, diagnoses, or any written output:
 
-- `$@` — the PRD slug (e.g. `agent-chat`)
+- Framework names: React, Vue, Angular, Svelte, Next.js, jQuery, etc.
+- Library / API names: signIn, onSubmit, useState, handler, listener, hook, fiber, hydration, bundle, chunk.
+- Language / technology names: JavaScript, TypeScript, CSS, HTML attribute, DOM element property.
+- Web internals: event bubbling, reflow, paint, composite, binding, portal, shadow DOM, custom element.
+- File paths or module names: `src/...`, `components/...`, `lib/...`, `*.tsx`, `*.ts`.
+- Server/backend jargon: API endpoint URL paths you read from the product UI are fine; discussing "the auth endpoint is at /api/auth" from code-derived knowledge is NOT fine. Only mention URLs you observed the browser navigate to.
 
-Delta mode is inferred automatically: if a prior qa-report exists with `result: fail`, re-run only the entries that failed last time.
+If you catch yourself writing any of these, stop and rewrite in user-facing language.
+
+**Banned tool patterns.** Do not use `agent-browser eval` or any evaluate-style command to inspect framework internals:
+
+- Allowed `eval` targets: `window.location.href`, `document.title`, visible text content via `document.body.innerText.slice(0, 500)`, presence of cookies via `document.cookie`, scroll positions (`document.querySelector('...').scrollTop` — OK, that's user-observable behavior via a selector that's already in the PRD's Acceptance block).
+- Banned `eval` targets: `__reactFiber*`, `__reactContainer*`, `__reactEvents*`, `Object.keys(el).filter(k => k.startsWith('__'))`, any framework-internal property detection, "does this element have React internals" probes, event listener introspection (`getEventListeners`, etc.), form `.action` / `.method` / `input.name` attribute introspection as diagnostic. These are implementation details, not user observations.
+
+The rule of thumb: **if a non-technical user could not meaningfully understand what you just observed, it's not a valid QA observation.**
 
 ## What this skill reads vs does not read
 
@@ -50,8 +64,9 @@ Delta mode is inferred automatically: if a prior qa-report exists with `result: 
 - The ExecPlan (`docs/exec-plans/`). The worker-2 sparse checkout excludes this path.
 - Git history (`git log -p`, `git show` on source files).
 - Test files (`*.test.*`, `*.spec.*`).
+- DOM property internals (see banned tool patterns above).
 
-This skill verifies behavior by interacting with the running build — `agent-browser` or Playwright for UI, `curl` for HTTP, `psql $DATABASE_URL_READONLY` for read-only data checks. The PRD is the only source of truth. If the PRD is unclear, mark the entry `prd-ambiguous` rather than guessing.
+This skill verifies behavior by interacting with the running build as a user would — `agent-browser` or Playwright with user-observable operations (click, type, navigate, screenshot, observe URL, observe visible text, observe cookies). The PRD is the only source of truth. If the PRD is unclear, mark the entry `prd-ambiguous` rather than guessing.
 
 ## Phase 1: Load the contract
 
@@ -176,15 +191,23 @@ Write `docs/qa-reports/$@-run-N.md` with the structure below. Commit and push wi
       - Precondition: ...
       - Trigger: ...
       - Observable: scrollTop >= scrollHeight - clientHeight - 50px within 500ms.
-    - What happened: scrollTop was 0 after 500ms.
+    - What I did: Navigated to /chat/123. Waited 500ms. Observed scroll position.
+    - What I observed: 500ms after navigation, the chat messages were scrolled to the top of the list, not the bottom. Latest message was not visible. Verified 3 times — same result.
     - Evidence: `evidence/UX-scroll-01-after.png`
-    - Diagnosis (PRD-only): implementation likely skipped auto-scroll on mount.
 
     ### EDGE-003 — <name> — PRD-AMBIGUOUS
     - Acceptance: ... (copy)
-    - What happened: observed behavior X. PRD says Y, but the step "when user closes confirm modal" is unclear about state persistence.
+    - What I did: Triggered the edge condition per Acceptance steps.
+    - What I observed: Observed behavior X. The PRD's Observable says Y, but the step "when user closes confirm modal" doesn't specify whether the state persists.
     - Evidence: `evidence/EDGE-003-modal.png`
     - Route: fix-gen will classify as HITL and ping the CEO via Discord.
+
+### Writing style for observations
+
+- Each FAIL entry has a "What I did" (user actions you took) and "What I observed" (user-visible result). No "Diagnosis" field — do not write one.
+- Describe only what a non-technical person could understand. "URL stayed at /login", "the button click did nothing visible", "no toast appeared", "the page title is 'X' instead of 'Y'".
+- State reproducibility: "Verified N times — same result." if you retried. Helps fix-gen and the CEO gauge reliability.
+- Never hypothesize about **why** the failure happens. That is a developer's job.
 
     ## Baseline
 
@@ -225,7 +248,9 @@ Exit. Leo2 wakes on the IPC event and invokes `/verify-qa` to route to the next 
 ## Non-negotiables
 
 - Never read source code. `src/`, `app/`, `lib/`, `components/`, `prisma/` do not exist on worker-2 (sparse checkout), but even if they did, this skill must refuse.
-- Never skip "what I verified" description on a pass. One or two sentences minimum (anti-lazy rule).
+- Never write developer-language diagnoses. No framework names, no library APIs, no DOM property introspection, no "why it broke" hypotheses. Observe as a user, write as a user.
+- Never use `agent-browser eval` to inspect framework internals (`__reactFiber`, `__reactContainer`, attribute introspection for diagnostic purposes). Only user-observable queries are allowed.
+- Never skip "what I did" + "what I observed" per entry. One or two sentences each minimum (anti-lazy rule).
 - Never fabricate evidence. Every cited path must exist in `evidence/`.
 - Never write to the database. Use `DATABASE_URL_READONLY` for any data checks.
 - Never start a server. If the build is unreachable, write `result: blocked` and exit.

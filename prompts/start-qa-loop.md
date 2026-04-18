@@ -155,16 +155,24 @@ Write `docs/qa-reports/$@-run-N.md`:
       - Precondition: ...
       - Trigger: ...
       - Observable: Within 500ms, scrollTop >= scrollHeight - clientHeight - 50px.
-    - What happened: 500ms after navigation, scrollTop was 0 (top of list).
-    - Evidence: `evidence/UX-scroll-01-after.png`, `evidence/UX-scroll-01-console.log`
-    - Diagnosis (PRD-only, no code): implementation likely renders messages without auto-scroll on mount.
+    - What I did: Navigated to /chat/123 fresh. Waited 500ms.
+    - What I observed: The message list was scrolled to the top (scrollTop = 0). The latest message was not visible. Verified 3 times — same result.
+    - Evidence: `evidence/UX-scroll-01-after.png`
 
     ### EDGE-003 — <name> — PRD-AMBIGUOUS
 
     - Acceptance: ... (copy the block)
-    - What happened: Observed behavior X. PRD says Y, but the step "when the user closes the confirm modal" is ambiguous about whether the state persists.
+    - What I did: Triggered the edge condition per Acceptance Steps.
+    - What I observed: After closing the confirm modal, the form fields were empty. The PRD's Observable doesn't specify whether draft state should persist or reset on modal close.
     - Evidence: `evidence/EDGE-003-modal.png`
     - Escalation path: fix-gen will classify this as HITL and escalate to the CEO via Discord.
+
+### Writing style for observations
+
+- Each entry uses **What I did** (user actions) and **What I observed** (visible result). No "Diagnosis" field — never write one.
+- Keep language accessible. Any CEO or non-developer reading the report must be able to follow what happened.
+- State reproducibility for FAIL entries: "Verified N times — same result."
+- Never hypothesize about **why** the failure happens. That is the developer's job.
 
     ## Baseline
 
