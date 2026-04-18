@@ -123,6 +123,7 @@ cmd_send() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --worker|-w) WT_REMOTE_HOST="$2"; shift 2 ;;
+      --run|-r) WT_RUN=1; shift ;;
       -*) err "Unknown flag: $1"; exit 1 ;;
       *) name="$1"; shift ;;
     esac
@@ -203,10 +204,48 @@ REMOTE
 
   echo ""
   echo -e "${GREEN}✓ Sent${NC}"
-  echo ""
-  echo "  ssh $WT_REMOTE_HOST"
-  echo "  cd $rwt"
-  echo "  pi  # → /start-exec-plan-loop"
+
+  if [[ "${WT_RUN:-}" == "1" ]]; then
+    log "Starting exec-plan-loop on ${WT_REMOTE_HOST}..."
+    ssh "$WT_REMOTE_HOST" bash -s -- "$rwt" "$name" <<'RUNREMOTE'
+      set -euo pipefail
+      WT="$1"; NAME="$2"
+      SESSION="epl-${NAME}"
+
+      # Kill existing session if any
+      tmux kill-session -t "$SESSION" 2>/dev/null || true
+
+      # Create tmux session in the worktree
+      tmux new-session -d -s "$SESSION" -c "$WT"
+
+      # Start pi with Bedrock Opus
+      tmux send-keys -t "$SESSION" "pi --provider amazon-bedrock --model global.anthropic.claude-opus-4-6-v1" Enter
+
+      # Wait for pi to boot, then start the loop
+      sleep 8
+      tmux send-keys -t "$SESSION" "/start-exec-plan-loop" Enter
+
+      sleep 3
+      echo "  ▸ tmux session: $SESSION"
+      echo "  ▸ Output:"
+      tmux capture-pane -t "$SESSION" -p | tail -10
+RUNREMOTE
+
+    echo ""
+    echo -e "${GREEN}✓ Loop running${NC} in tmux session ${BLUE}epl-${name}${NC}"
+    echo ""
+    echo "  Monitor:  ssh $WT_REMOTE_HOST 'tmux capture-pane -t epl-${name} -p | tail -20'"
+    echo "  Status:   ssh $WT_REMOTE_HOST 'cat ${rwt}/.pi/exec-plan-loop/state.json | jq .'"
+    echo "  Steer:    ssh $WT_REMOTE_HOST 'tmux send-keys -t epl-${name} \"your instruction\" Enter'"
+    echo "  Stop:     ssh $WT_REMOTE_HOST 'tmux kill-session -t epl-${name}'"
+  else
+    echo ""
+    echo "  ssh $WT_REMOTE_HOST"
+    echo "  cd $rwt"
+    echo "  pi  # → /start-exec-plan-loop"
+    echo ""
+    echo "  Or: wt send $name --run  (auto-start loop)"
+  fi
   echo ""
 }
 
