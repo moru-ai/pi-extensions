@@ -45,8 +45,7 @@ pi update
 
 | Prompt | Description |
 |--------|-------------|
-| `perspectives` | Perspectives deliberation prompt template |
-| `kickoff` | Start a new workstream — gather requirements, create worktree, write exec plan |
+| `prd` | Write a PRD through a lightweight interview |
 
 ### CLI Tools
 
