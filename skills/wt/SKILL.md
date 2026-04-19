@@ -4,7 +4,6 @@ description: "Worktree management for worker exec-plan workflow. Creates local w
 metadata:
   author: omin
   version: "1.0.0"
-allowed-tools: Bash(wt:*), Bash(git:*), Bash(ssh:*)
 ---
 
 # wt — Worktree → worker exec-plan workflow
