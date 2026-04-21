@@ -61,7 +61,7 @@ Assume the user is fatigued and has limited cognitive bandwidth. If the answer e
 
 - The team's pi-extensions repo lives at `~/pi-extensions`.
 - Remote: `https://github.com/moru-ai/pi-extensions.git`
-- Contains custom extensions, agents, prompts, and perspectives-prompts for pi.
+- Contains custom extensions, agents, and prompts for pi.
 - When the user asks about pi extensions, custom tools, or shared pi config, check this repo first.
 
 ## Open Source Library References
