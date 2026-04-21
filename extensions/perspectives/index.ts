@@ -767,6 +767,7 @@ async function callPi(
 // ── Extension ──────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
+	/*
 	pi.registerTool({
 		name: "perspectives",
 		label: "Perspectives",
@@ -1171,4 +1172,5 @@ export default function (pi: ExtensionAPI) {
 			await (ctx as any).session.prompt(`Use the perspectives tool to analyze: ${topic}`);
 		},
 	});
+	*/
 }

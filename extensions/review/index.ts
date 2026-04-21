@@ -246,6 +246,7 @@ async function runClaudeReview(
 // ── Extension ──────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
+	/*
 	pi.registerTool({
 		name: "review",
 		label: "Review",
@@ -467,4 +468,5 @@ export default function (pi: ExtensionAPI) {
 			);
 		},
 	});
+	*/
 }
