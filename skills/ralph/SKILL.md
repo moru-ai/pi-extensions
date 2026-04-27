@@ -1,73 +1,57 @@
 ---
 name: ralph
-description: Long-running iterative development loops with pacing control and verifiable progress. Use when tasks require multiple iterations, many discrete steps, or periodic reflection with clear checkpoints; avoid for simple one-shot tasks or quick fixes.
+description: Named simple prompt loops. Use only when the user wants one prompt repeated until the model says it is done. Use exec-plan-loop for complex checklist, planning, validation, or multi-file execution workflows.
 ---
 
-# Ralph - Long-Running Development Loops
+# Ralph - Named Simple Prompt Loops
 
-Use the `ralph_start` tool to begin a loop:
+Ralph is intentionally small: it repeats one prompt until the assistant says it is complete.
 
-```
+Each loop is namespaced by name, so multiple loops can coexist without state collisions. If no name is provided, Ralph asks the Codex Spark naming model for a short slug, passes the current namespaces so it can avoid semantic collisions, and falls back to a prompt-derived slug if needed.
+
+Use `ralph_start` for simple persistence:
+
+```ts
 ralph_start({
-  name: "loop-name",
-  taskContent: "# Task\n\n## Goals\n- Goal 1\n\n## Checklist\n- [ ] Item 1\n- [ ] Item 2",
-  maxIterations: 50,        // Default: 50
-  itemsPerIteration: 3,     // Optional: suggest N items per turn
-  reflectEvery: 10          // Optional: reflect every N iterations
+  prompt: "Fix the small issue and keep going until done",
+  args: "optional extra context",
+  maxIterations: 50
 })
 ```
 
-## Loop Behavior
+Pass `name` only when the user gave a stable namespace:
 
-1. **Write the task file**: Create `.ralph/<name>.md` with the task content. The tool does NOT create this file—you must write it yourself using the Write tool.
-2. Work on the task and update the file each iteration.
-3. Record verification evidence (commands run, file paths, outputs) in the task file.
-4. Call `ralph_done` to proceed to the next iteration.
-5. Output `<promise>COMPLETE</promise>` when finished.
-6. Stop when complete or when max iterations is reached (default 50).
-
-## User Commands
-
-- `/start-ralph-loop <name|path>` - Start a new loop.
-- `/resume-ralph-loop <name>` - Resume loop.
-- `/pause-ralph-loop` - Pause loop without completing it.
-- `/stop-ralph-loop` - Stop active loop (idle only).
-- `/status-ralph-loop` - Show loops.
-- `/list-ralph-loop --archived` - Show archived loops.
-- `/archive-ralph-loop <name>` - Move loop to archive.
-- `/clean-ralph-loop [--all]` - Clean completed loops.
-- `/cancel-ralph-loop <name>` - Delete loop.
-- `/nuke-ralph-loop [--yes]` - Delete all .ralph data.
-
-Press ESC to interrupt streaming, send a normal message to resume, and run `/stop-ralph-loop` when idle to end the loop.
-
-## Task File Format
-
-```markdown
-# Task Title
-
-Brief description.
-
-## Goals
-- Goal 1
-- Goal 2
-
-## Checklist
-- [ ] Item 1
-- [ ] Item 2
-- [x] Completed item
-
-## Verification
-- Evidence, commands run, or file paths
-
-## Notes
-(Update with progress, decisions, blockers)
+```ts
+ralph_start({ name: "small-fix", prompt: "Fix the small issue and keep going until done" })
 ```
 
-## Best Practices
+## Behavior
 
-1. Write a clear checklist with discrete items.
-2. Update checklist and notes as you go.
-3. Capture verification evidence for completed items.
-4. Reflect when stuck to reassess approach.
-5. Output the completion marker only when truly done.
+1. Ralph stores each loop under `.pi/ralph-loop/<name>/`.
+2. It sends the loop prompt with a hidden-visible marker: `RALPH_LOOP_NAME: <name>`.
+3. After that agent turn ends, Ralph updates only that named loop state.
+4. If not complete, Ralph queues the next iteration for the same loop.
+5. The loop stops when the assistant outputs exactly:
+
+```xml
+<promise>COMPLETE</promise>
+```
+
+6. The loop also stops at `maxIterations`, `/stop-ralph-loop <name>`, or `/cancel-ralph-loop <name>`.
+
+## Commands
+
+- `/start-ralph-loop "prompt" [--name NAME] [--max-iterations N] [-- extra args]` - Start a prompt loop. Name is auto-generated unless `--name` is passed.
+- `/start-ralph-loop <name>` - Resume a persisted active named loop.
+- `/status-ralph-loop` - Show all Ralph loop states.
+- `/stop-ralph-loop <name>` - Stop one named loop.
+- `/cancel-ralph-loop <name>` - Delete one named loop state.
+- `/cancel-ralph-loop --all` - Delete all Ralph loop state.
+
+## Use exec-plan-loop instead when
+
+- There is a checklist or execution plan.
+- The work needs durable task files.
+- Verification/acceptance criteria matter.
+- Multiple milestones or dependencies are involved.
+- You need richer recovery, validation, commits, or active plan handling.

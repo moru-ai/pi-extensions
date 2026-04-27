@@ -1,62 +1,47 @@
 # Ralph Extension
 
-Long-running agent loops for iterative development in Pi. Best for verifiable tasks that need multiple passes, a persisted checklist, and optional reflection checkpoints.
+Named simple prompt loops for Pi.
 
-This extension is adapted from Thomas Mustier's `pi-ralph-wiggum`, which is based on Geoffrey Huntley's Ralph Wiggum approach.
+Ralph is intentionally much simpler than `exec-plan-loop`: it takes a prompt, repeats it, and stops when the assistant outputs the completion marker.
+
+Use `exec-plan-loop` for checklist-driven, plan-backed, validation-heavy, or multi-milestone work.
 
 ## How it works
 
-- Ralph stores loop task files and state under `.ralph/` in the current project.
-- Each loop has a name, task markdown file, state JSON file, iteration counter, and status.
-- The agent works one iteration at a time, updates the task file, then calls `ralph_done` to queue the next iteration.
-- The loop stops when the agent emits `<promise>COMPLETE</promise>`, reaches max iterations, or you stop it.
+- Each Ralph loop has a namespace/name.
+- If no name is provided, Ralph asks Codex Spark (`gpt-5.3-codex-spark`) to create a short slug. It includes current namespaces in the naming prompt so the model can avoid semantic collisions, with a deterministic prompt-derived fallback.
+- State is stored under `.pi/ralph-loop/<name>/`.
+- Each queued turn includes `RALPH_LOOP_NAME: <name>` so the extension updates the correct loop.
+- After each turn, Ralph queues the next turn for that same loop unless the assistant outputs `<promise>COMPLETE</promise>`.
+- Multiple named loops can coexist without sharing state.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `/start-ralph-loop <name\|path>` | Start a new loop |
-| `/resume-ralph-loop <name>` | Resume a paused loop |
-| `/pause-ralph-loop` | Pause current loop without completing it |
-| `/stop-ralph-loop` | Stop active loop (idle only) |
-| `/status-ralph-loop` | Show all loops |
-| `/list-ralph-loop --archived` | Show archived loops |
-| `/archive-ralph-loop <name>` | Move loop to archive |
-| `/clean-ralph-loop [--all]` | Clean completed loops |
-| `/cancel-ralph-loop <name>` | Delete a loop |
-| `/nuke-ralph-loop [--yes]` | Delete all `.ralph` data |
+| `/start-ralph-loop "prompt" [--name NAME] [--max-iterations N] [-- extra args]` | Start a prompt loop; name is auto-generated unless `--name` is passed |
+| `/start-ralph-loop <name>` | Resume a persisted active loop |
+| `/status-ralph-loop` | Show all loop states |
+| `/stop-ralph-loop <name>` | Stop one loop |
+| `/cancel-ralph-loop <name>` | Delete one loop state |
+| `/cancel-ralph-loop --all` | Delete all Ralph loop state |
 
-### Options for `/start-ralph-loop`
+## Agent tool
 
-| Option | Description |
-|--------|-------------|
-| `--max-iterations N` | Stop after N iterations (default 50) |
-| `--items-per-iteration N` | Suggest N items per turn |
-| `--reflect-every N` | Reflect every N iterations |
-
-## Agent tools
-
-The agent can self-start loops using `ralph_start`:
+The agent can start a loop with `ralph_start`:
 
 ```json
 {
-  "name": "refactor-auth",
-  "taskContent": "# Task\n\n## Checklist\n- [ ] Item 1",
-  "maxIterations": 50,
-  "itemsPerIteration": 3,
-  "reflectEvery": 10
+  "prompt": "Fix the small issue and keep going until done",
+  "args": "optional extra context",
+  "maxIterations": 50
 }
 ```
 
-The agent advances an active loop with `ralph_done` after making real progress.
+## Completion marker
 
-## Persistence
+The loop stops when the assistant outputs exactly:
 
-For a loop named `fix-tests`, Ralph writes:
-
-```text
-.ralph/fix-tests.md
-.ralph/fix-tests.state.json
+```xml
+<promise>COMPLETE</promise>
 ```
-
-The markdown file is the human/agent-editable checklist and notes. The JSON file stores runtime state such as iteration, status, and limits.
