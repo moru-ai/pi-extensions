@@ -96,8 +96,9 @@ export type ModelSpecParts = {
 export type LoopEvent =
 	| { type: "loop_start"; runTag: string; iteration: number; activePlans: string[]; model: string | null }
 	| { type: "loop_resume"; runTag: string; iteration: number; activePlans: string[] }
-	| { type: "loop_stop"; reason: "user" | "no_plans" | "provider_exhaustion" | "error"; summary: string }
+	| { type: "loop_stop"; reason: "user" | "no_plans" | "provider_exhaustion" | "send_message_failure" | "error"; summary: string }
 	| { type: "iteration_end"; iteration: number; status: LoopAttemptStatus; model: string | null; summary: string }
+	| { type: "send_message_failed"; iteration: number; model: string | null; reason: string }
 	| { type: "model_switch"; from: string | null; to: string; consecutiveErrors: number; reason: string }
 	| { type: "model_switch_failed"; currentModel: string | null; consecutiveErrors: number; reason: string }
 	| { type: "send_follow_up"; mode: "plain_continue" | "full_prompt" | "pre_turn_compact"; iteration: number }

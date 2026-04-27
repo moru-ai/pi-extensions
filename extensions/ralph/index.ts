@@ -133,6 +133,10 @@ function appendEvent(ctx: ExtensionContext, name: string, event: Record<string, 
 	}
 }
 
+function appendEventToLoops(ctx: ExtensionContext, names: Iterable<string>, event: Record<string, unknown>): void {
+	for (const name of names) appendEvent(ctx, name, event);
+}
+
 function tokenizeArgs(args: string): string[] {
 	return args.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((token) => token.replace(/^"|"$/g, "")) ?? [];
 }
@@ -379,13 +383,29 @@ export default function ralph(pi: ExtensionAPI) {
 	function syncAskUserQuestionTool(ctx: ExtensionContext): void {
 		const shouldDisable = runtimeActive.size > 0;
 		const change = setAskUserQuestionToolEnabled(pi, !shouldDisable);
+		if (change !== "unchanged") {
+			appendEventToLoops(ctx, runtimeActive, {
+				type: "tool_availability",
+				tool: "ask_user_question",
+				change,
+				loopActive: shouldDisable,
+			});
+		}
 		notifyToolAvailability(ctx, change);
 	}
 
-	function sendLoopPrompt(name: string, content: string, ctx: ExtensionContext): void {
+	function sendLoopPrompt(name: string, content: string, ctx: ExtensionContext, mode: "initial" | "resume" | "plain_continue" | "full_prompt" | "post_compaction" = "full_prompt"): void {
 		runtimeActive.add(name);
 		syncAskUserQuestionTool(ctx);
+		const activeState = loadState(ctx, name);
+		appendEvent(ctx, name, { type: "send_follow_up", mode, iteration: activeState?.iteration ?? null });
 		pi.sendUserMessage(content, { deliverAs: "followUp" });
+	}
+
+	function getContextUsagePercent(ctx: ExtensionContext): number | null {
+		const usage = ctx.getContextUsage();
+		if (!usage || usage.tokens === null || usage.contextWindow <= 0) return null;
+		return Math.round((usage.tokens / usage.contextWindow) * 100);
 	}
 
 	function shouldCompact(ctx: ExtensionContext): boolean {
@@ -396,11 +416,14 @@ export default function ralph(pi: ExtensionAPI) {
 	function triggerCompaction(ctx: ExtensionContext): void {
 		if (compactionInProgress || runtimeActive.size === 0) return;
 		compactionInProgress = true;
+		const activeNames = [...runtimeActive];
+		appendEventToLoops(ctx, activeNames, { type: "compaction_start", contextUsagePercent: getContextUsagePercent(ctx) });
 		if (ctx.hasUI) ctx.ui.notify("Ralph auto-compaction started.", "info");
 		ctx.compact({
 			customInstructions: RALPH_COMPACT_INSTRUCTIONS,
 			onComplete: async () => {
 				compactionInProgress = false;
+				appendEventToLoops(ctx, activeNames, { type: "compaction_success" });
 				if (ctx.hasUI) ctx.ui.notify("Ralph auto-compaction completed.", "info");
 				for (const name of [...runtimeActive]) {
 					const activeState = loadState(ctx, name);
@@ -408,12 +431,13 @@ export default function ralph(pi: ExtensionAPI) {
 						runtimeActive.delete(name);
 						continue;
 					}
-					sendLoopPrompt(name, await buildPrompt(pi, activeState, { postCompaction: true }), ctx);
+					sendLoopPrompt(name, await buildPrompt(pi, activeState, { postCompaction: true }), ctx, "post_compaction");
 				}
 				syncAskUserQuestionTool(ctx);
 			},
 			onError: (error) => {
 				compactionInProgress = false;
+				appendEventToLoops(ctx, activeNames, { type: "compaction_failure", error: error.message });
 				if (ctx.hasUI) ctx.ui.notify(`Ralph auto-compaction failed: ${error.message}`, "warning");
 			},
 		});
@@ -437,7 +461,7 @@ export default function ralph(pi: ExtensionAPI) {
 		saveState(ctx, state);
 		appendEvent(ctx, name, { type: "loop_start", runTag: state.runTag, maxIterations, prompt: truncate(prompt), args });
 		updateStatus(ctx);
-		sendLoopPrompt(name, await buildPrompt(pi, state), ctx);
+		sendLoopPrompt(name, await buildPrompt(pi, state), ctx, "initial");
 		return state;
 	}
 
@@ -484,7 +508,7 @@ export default function ralph(pi: ExtensionAPI) {
 					saveState(ctx, existing);
 					appendEvent(ctx, existing.name, { type: "loop_resume", runTag: existing.runTag, iteration: existing.iteration });
 					updateStatus(ctx);
-					sendLoopPrompt(existing.name, await buildPrompt(pi, existing), ctx);
+					sendLoopPrompt(existing.name, await buildPrompt(pi, existing), ctx, "resume");
 					return;
 				}
 			}
@@ -589,8 +613,8 @@ export default function ralph(pi: ExtensionAPI) {
 			triggerCompaction(ctx);
 			return;
 		}
-		if (outcome.shouldSendPlainContinue) sendLoopPrompt(name, "continue", ctx);
-		else sendLoopPrompt(name, await buildPrompt(pi, next), ctx);
+		if (outcome.shouldSendPlainContinue) sendLoopPrompt(name, "continue", ctx, "plain_continue");
+		else sendLoopPrompt(name, await buildPrompt(pi, next), ctx, "full_prompt");
 		if (ctx.hasUI) ctx.ui.notify(`Ralph loop '${name}' continuing (#${next.iteration}).`, outcome.status === "error" ? "warning" : "info");
 	});
 }
