@@ -248,16 +248,8 @@ export default function (pi: ExtensionAPI) {
 			parts.push(`1. Continue working on the task`);
 		}
 		parts.push(`2. Update the task file (${state.taskFile}) with your progress`);
-		parts.push(`3. Record verification evidence for completed items: commands, outputs, file paths, logs, or artifacts`);
-		parts.push(`4. Use the agent tool for bounded specialist help when it improves quality:`);
-		parts.push(`   - explorer: read-only codebase mapping before editing`);
-		parts.push(`   - architect: architecture/tradeoff review when direction changes or risk is high`);
-		parts.push(`   - critic: plan/checklist actionability review when stuck or before large pivots`);
-		parts.push(`   - verifier: independent evidence check before final completion`);
-		parts.push(`   - general-purpose: isolated implementation only when file ownership is clear`);
-		parts.push(`   Do not run parallel implementation agents against overlapping files.`);
-		parts.push(`5. When FULLY COMPLETE, respond with: ${COMPLETE_MARKER}`);
-		parts.push(`6. Otherwise, call the ralph_done tool to proceed to next iteration`);
+		parts.push(`3. When FULLY COMPLETE, respond with: ${COMPLETE_MARKER}`);
+		parts.push(`4. Otherwise, call the ralph_done tool to proceed to next iteration`);
 
 		return parts.join("\n");
 	}
@@ -321,13 +313,6 @@ export default function (pi: ExtensionAPI) {
 
 			const fullPath = path.resolve(ctx.cwd, taskFile);
 			if (!fs.existsSync(fullPath)) {
-				if (isPath) {
-					ctx.ui.notify(
-						`Task file not found: ${taskFile}. Ralph resolves relative paths from ${ctx.cwd}. Run /start-ralph-loop from the repo root that contains the task file, or pass the correct path.`,
-						"error",
-					);
-					return;
-				}
 				ensureDir(fullPath);
 				fs.writeFileSync(fullPath, DEFAULT_TEMPLATE, "utf-8");
 				ctx.ui.notify(`Created task file: ${taskFile}`, "info");
@@ -611,17 +596,17 @@ Examples:
 	});
 
 	pi.registerCommand("start-ralph-loop", {
-		description: "<name|path> [--items-per-iteration N] [--reflect-every N] [--max-iterations N] — Start a Ralph loop",
+		description: "Start a Ralph loop",
 		handler: async (args, ctx) => commands.start(args, ctx),
 	});
 
 	pi.registerCommand("pause-ralph-loop", {
-		description: "Pause current Ralph loop without completing it",
+		description: "Pause current Ralph loop",
 		handler: async (args, ctx) => commands.stop(args, ctx),
 	});
 
 	pi.registerCommand("resume-ralph-loop", {
-		description: "<name> — Resume a paused Ralph loop",
+		description: "Resume a paused Ralph loop",
 		handler: async (args, ctx) => commands.resume(args, ctx),
 	});
 
@@ -636,27 +621,27 @@ Examples:
 	});
 
 	pi.registerCommand("cancel-ralph-loop", {
-		description: "<name> — Delete Ralph loop state",
+		description: "Delete Ralph loop state",
 		handler: async (args, ctx) => commands.cancel(args, ctx),
 	});
 
 	pi.registerCommand("archive-ralph-loop", {
-		description: "<name> — Archive a Ralph loop",
+		description: "Archive a Ralph loop",
 		handler: async (args, ctx) => commands.archive(args, ctx),
 	});
 
 	pi.registerCommand("clean-ralph-loop", {
-		description: "[--all] — Clean completed Ralph loops",
+		description: "Clean completed Ralph loops",
 		handler: async (args, ctx) => commands.clean(args, ctx),
 	});
 
 	pi.registerCommand("list-ralph-loop", {
-		description: "[--archived] — List Ralph loops",
+		description: "List Ralph loops",
 		handler: async (args, ctx) => commands.list(args, ctx),
 	});
 
 	pi.registerCommand("nuke-ralph-loop", {
-		description: "[--yes] — Delete all .ralph data",
+		description: "Delete all .ralph data",
 		handler: async (args, ctx) => commands.nuke(args, ctx),
 	});
 

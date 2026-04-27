@@ -74,7 +74,6 @@ interface AgentTaskDetails {
 	sessionId?: string;
 	sessionDir?: string;
 	sessionFile?: string;
-	sessionHtmlFile?: string;
 	failureMessage?: string;
 	autoCompactionCount?: number;
 	autoCompactions?: AutoCompactionEventDetails[];
@@ -283,18 +282,12 @@ const DEFAULT_AGENT_TOOL_POLICY: AgentToolPolicy = {
 	blockedTools: [...BLOCKED_CHILD_TOOL_NAMES],
 };
 
-const READ_ONLY_AGENT_TOOL_POLICY: AgentToolPolicy = {
-	builtIns: [...BUILT_IN_TOOL_GROUPS.readOnly],
-	allowExtensionTools: ["websearch"],
-	blockedTools: [...BLOCKED_CHILD_TOOL_NAMES],
-};
-
 const AGENT_TOOL_POLICIES: Record<string, AgentToolPolicy> = {
-	explorer: READ_ONLY_AGENT_TOOL_POLICY,
-	planner: READ_ONLY_AGENT_TOOL_POLICY,
-	architect: READ_ONLY_AGENT_TOOL_POLICY,
-	critic: READ_ONLY_AGENT_TOOL_POLICY,
-	verifier: READ_ONLY_AGENT_TOOL_POLICY,
+	explorer: {
+		builtIns: [...BUILT_IN_TOOL_GROUPS.readOnly],
+		allowExtensionTools: "all",
+		blockedTools: [...BLOCKED_CHILD_TOOL_NAMES],
+	},
 	"general-purpose": {
 		...DEFAULT_AGENT_TOOL_POLICY,
 		builtIns: [...DEFAULT_AGENT_TOOL_POLICY.builtIns],
@@ -307,16 +300,6 @@ const BUILT_IN_TOOL_NAMES = new Set<string>(Object.keys(BUILT_IN_TOOLS));
 function appendStderr(result: AgentTaskDetails, message: string | undefined) {
 	if (!message?.trim()) return;
 	result.stderr = [result.stderr.trim(), message.trim()].filter(Boolean).join("\n");
-}
-
-async function exportChildSessionHtml(session: AgentSession, result: AgentTaskDetails, debugSessionDir: string): Promise<void> {
-	const htmlPath = path.join(debugSessionDir, "session.html");
-	try {
-		await session.exportToHtml(htmlPath);
-		result.sessionHtmlFile = htmlPath;
-	} catch (error) {
-		appendStderr(result, `Failed to export child session HTML: ${error instanceof Error ? error.message : String(error)}`);
-	}
 }
 
 function getAgentToolPolicy(agentName: string): AgentToolPolicy {
@@ -575,7 +558,6 @@ async function runChildAgentAttempt(params: {
 		unsubscribe();
 		if (signal) signal.removeEventListener("abort", abortHandler);
 		result.sessionFile = session.sessionManager.getSessionFile() ?? result.sessionFile ?? findSessionFile(debugSessionDir);
-		await exportChildSessionHtml(session, result, debugSessionDir);
 		session.dispose();
 	}
 
@@ -910,8 +892,6 @@ function buildBatchContent(details: AgentBatchDetails): string {
 			`[${task.index + 1}] ${task.description} (${task.agent})`,
 			`Status: ${task.state}`,
 			`CWD: ${task.cwd}`,
-			...(task.sessionHtmlFile ? [`Session HTML: ${task.sessionHtmlFile}`] : []),
-			...(task.sessionFile ? [`Session JSONL: ${task.sessionFile}`] : []),
 			task.state === "failed" ? "Failure:" : task.state === "completed" ? "Result:" : "Progress:",
 			buildTaskOutput(task),
 		];
@@ -1098,8 +1078,7 @@ export default function agentExtension(pi: ExtensionAPI) {
 					parts.push(theme.fg("muted", `CWD: ${task.cwd}`));
 					if (task.model) parts.push(theme.fg("muted", `Model: ${task.model}`));
 					if (task.sessionId) parts.push(theme.fg("muted", `Session ID: ${task.sessionId}`));
-					if (task.sessionHtmlFile) parts.push(theme.fg("muted", `Session HTML: ${task.sessionHtmlFile}`));
-					if (task.sessionFile) parts.push(theme.fg("muted", `Session JSONL: ${task.sessionFile}`));
+					if (task.sessionFile) parts.push(theme.fg("muted", `Session file: ${task.sessionFile}`));
 					if (task.sessionDir && !task.sessionFile) parts.push(theme.fg("muted", `Session dir: ${task.sessionDir}`));
 					if ((task.autoCompactionCount ?? 0) > 0) {
 						parts.push(
