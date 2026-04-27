@@ -19,12 +19,13 @@ ralph_start({
 
 ## Loop Behavior
 
-1. **Write the task file**: Create `.ralph/<name>.md` with the task content. The tool does NOT create this file—you must write it yourself using the Write tool.
+1. Start from a clear task file or pass `taskContent` to `ralph_start`, which writes `.ralph/<name>.md`.
 2. Work on the task and update the file each iteration.
 3. Record verification evidence (commands run, file paths, outputs) in the task file.
-4. Call `ralph_done` to proceed to the next iteration.
-5. Output `<promise>COMPLETE</promise>` when finished.
-6. Stop when complete or when max iterations is reached (default 50).
+4. Use specialist subagents when useful: `explorer` for read-only mapping, `architect` for design risk, `critic` for actionability, `verifier` for evidence, and `general-purpose` for isolated implementation only when file ownership is clear.
+5. Call `ralph_done` to proceed to the next iteration.
+6. Output `<promise>COMPLETE</promise>` when finished.
+7. Stop when complete or when max iterations is reached (default 50).
 
 ## User Commands
 
@@ -69,5 +70,11 @@ Brief description.
 1. Write a clear checklist with discrete items.
 2. Update checklist and notes as you go.
 3. Capture verification evidence for completed items.
-4. Reflect when stuck to reassess approach.
-5. Output the completion marker only when truly done.
+4. Use `verifier` before final completion when the task has meaningful acceptance criteria.
+5. Do not run parallel implementation agents against overlapping files.
+6. Reflect when stuck to reassess approach.
+7. Output the completion marker only when truly done.
+
+## Interview and RALPLAN Handoff
+
+For broad or ambiguous work, prefer `/deep-interview` → `/ralplan` → `/start-ralph-loop`. RALPLAN should produce `.ralph/plans/prd-<slug>.md`, `.ralph/plans/test-spec-<slug>.md`, and a concise `.ralph/<slug>.md` execution task. Start Ralph from `.ralph/<slug>.md`; the task file should link the requirements and test-spec artifacts and include checklist, verification plan, and subagent guidance.

@@ -248,8 +248,16 @@ export default function (pi: ExtensionAPI) {
 			parts.push(`1. Continue working on the task`);
 		}
 		parts.push(`2. Update the task file (${state.taskFile}) with your progress`);
-		parts.push(`3. When FULLY COMPLETE, respond with: ${COMPLETE_MARKER}`);
-		parts.push(`4. Otherwise, call the ralph_done tool to proceed to next iteration`);
+		parts.push(`3. Record verification evidence for completed items: commands, outputs, file paths, logs, or artifacts`);
+		parts.push(`4. Use the agent tool for bounded specialist help when it improves quality:`);
+		parts.push(`   - explorer: read-only codebase mapping before editing`);
+		parts.push(`   - architect: architecture/tradeoff review when direction changes or risk is high`);
+		parts.push(`   - critic: plan/checklist actionability review when stuck or before large pivots`);
+		parts.push(`   - verifier: independent evidence check before final completion`);
+		parts.push(`   - general-purpose: isolated implementation only when file ownership is clear`);
+		parts.push(`   Do not run parallel implementation agents against overlapping files.`);
+		parts.push(`5. When FULLY COMPLETE, respond with: ${COMPLETE_MARKER}`);
+		parts.push(`6. Otherwise, call the ralph_done tool to proceed to next iteration`);
 
 		return parts.join("\n");
 	}

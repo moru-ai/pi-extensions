@@ -283,12 +283,18 @@ const DEFAULT_AGENT_TOOL_POLICY: AgentToolPolicy = {
 	blockedTools: [...BLOCKED_CHILD_TOOL_NAMES],
 };
 
+const READ_ONLY_AGENT_TOOL_POLICY: AgentToolPolicy = {
+	builtIns: [...BUILT_IN_TOOL_GROUPS.readOnly],
+	allowExtensionTools: ["websearch"],
+	blockedTools: [...BLOCKED_CHILD_TOOL_NAMES],
+};
+
 const AGENT_TOOL_POLICIES: Record<string, AgentToolPolicy> = {
-	explorer: {
-		builtIns: [...BUILT_IN_TOOL_GROUPS.readOnly],
-		allowExtensionTools: "all",
-		blockedTools: [...BLOCKED_CHILD_TOOL_NAMES],
-	},
+	explorer: READ_ONLY_AGENT_TOOL_POLICY,
+	planner: READ_ONLY_AGENT_TOOL_POLICY,
+	architect: READ_ONLY_AGENT_TOOL_POLICY,
+	critic: READ_ONLY_AGENT_TOOL_POLICY,
+	verifier: READ_ONLY_AGENT_TOOL_POLICY,
 	"general-purpose": {
 		...DEFAULT_AGENT_TOOL_POLICY,
 		builtIns: [...DEFAULT_AGENT_TOOL_POLICY.builtIns],

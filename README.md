@@ -29,8 +29,10 @@ pi update
 | `audit-plan` | Audit plan review |
 | `commit-push` | Git commit and push automation |
 | `enable-all-tools` | Enable all available tools |
-| `exec-plan-loop` | Execution plan loop for structured task execution |
+| `exec-plan-loop` | Legacy execution plan loop for structured task execution |
 | `perspectives` | Multi-model structured deliberation (investigate → critique → synthesize) |
+| `workflow` | Slash-command aliases for `/deep-interview` and `/ralplan` |
+| `ralph` | Long-running iterative development loop with verification evidence |
 | `review` | Code review tool |
 | `websearch` | Web search tool |
 
@@ -39,13 +41,20 @@ pi update
 | Agent | Description |
 |-------|-------------|
 | `explorer` | Read-only codebase exploration and search |
+| `planner` | Read-only execution planning from clarified intent and repo evidence |
+| `architect` | Read-only architecture/tradeoff review |
+| `critic` | Read-only plan actionability gate |
+| `verifier` | Read-only completion evidence specialist |
 | `general-purpose` | Multi-step research and implementation |
 
-### Prompts
+### Skills
 
-| Prompt | Description |
-|--------|-------------|
-| `prd` | Write a PRD through a lightweight interview |
+| Skill | Description |
+|-------|-------------|
+| `deep-interview` | Socratic requirements interview before planning |
+| `ralplan` | Consensus planning that writes `.ralph/plans/prd-<slug>.md`, `.ralph/plans/test-spec-<slug>.md`, and `.ralph/<slug>.md` |
+| `ralph` | Guidance for Ralph loop usage |
+| `wt` | Worktree management workflow |
 
 ### CLI Tools
 
@@ -76,7 +85,7 @@ pi-extensions/
 ├── extensions/           ← pi loads these as extensions
 ├── agents/               ← read by agent extension (relative path)
 ├── perspectives-prompts/ ← read by perspectives extension (relative path)
-└── prompts/              ← pi loads these as prompt templates
+└── skills/               ← pi loads these as skills
 ```
 
 ## Adding project-specific extensions

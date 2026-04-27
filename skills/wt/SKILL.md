@@ -8,7 +8,9 @@ metadata:
 
 # wt — Worktree → worker exec-plan workflow
 
-Manages git worktrees locally and on workers (Mac minis) for exec-plan-loop execution.
+Manages git worktrees locally and on workers (Mac minis), mainly for legacy exec-plan-loop execution or explicit worker-isolation requests.
+
+Do not use `wt` as the default kickoff for broad ambiguous work. For new ambiguous implementation work, use `/deep-interview` → `/ralplan` → `/start-ralph-loop` first. Use `wt` only when the user explicitly asks for a worktree/worker sync, when isolation is clearly required, or when continuing an existing exec-plan-loop workflow.
 
 ## Naming Convention
 
@@ -20,7 +22,7 @@ Manages git worktrees locally and on workers (Mac minis) for exec-plan-loop exec
 
 The repo name is auto-detected from `git remote`. Multi-repo safe — each repo gets its own `<repo>-wt/` directory.
 
-## Standard Workflow
+## Legacy Exec-Plan Workflow
 
 ```bash
 # 1. Create local worktree + branch
