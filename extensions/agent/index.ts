@@ -266,7 +266,7 @@ const BUILT_IN_TOOL_GROUPS = {
 	coding: ["read", "bash", "edit", "write", "grep", "find", "ls"],
 } as const;
 
-const BLOCKED_CHILD_TOOL_NAMES = ["agent", "ask_user_question"] as const;
+const BLOCKED_CHILD_TOOL_NAMES = ["agent", "ask_user_question", "review_plan"] as const;
 
 type BuiltInToolName = keyof typeof BUILT_IN_TOOLS;
 
