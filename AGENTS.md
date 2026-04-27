@@ -5,11 +5,13 @@
 When changing this repository's Pi package contents (extensions, skills, prompts, agents, or package metadata):
 
 1. Commit and push the change to `origin/main`.
-2. Refresh the locally installed Pi package from a normal workspace by running:
+2. Refresh the locally installed Pi package from the workspace/session where you want the updated package to be available by running:
 
    ```bash
-   cd ~/vacatio && pi update
+   pi update
    ```
+
+   Do not hardcode a specific project path such as `~/vacatio`; run it from the relevant project checkout or active workspace.
 
 3. Verify the refreshed copy under Pi's installed package path when practical, for example:
 
