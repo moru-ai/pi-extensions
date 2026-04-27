@@ -6,7 +6,6 @@ import { parseModelSpec } from "./utils";
 
 function createDefaultProviderCursors(): ProviderCursorState {
 	return {
-		"amazon-bedrock": 0,
 		"openai-codex": 0,
 	};
 }
@@ -61,16 +60,7 @@ export function getRecoveryState(recovery: LoopRecoveryState | undefined): LoopR
 	};
 }
 
-function getProviderFromModelSpec(modelSpec: string | null): AgentProviderId | null {
-	if (!modelSpec) return null;
-	const parts = parseModelSpec(modelSpec);
-	if (!parts || !isAgentProviderId(parts.provider)) return null;
-	return parts.provider;
-}
-
-function getAlternateProvider(currentProvider: AgentProviderId | null): AgentProviderId {
-	if (currentProvider === "openai-codex") return "amazon-bedrock";
-	if (currentProvider === "amazon-bedrock") return "openai-codex";
+function getFallbackProvider(): AgentProviderId {
 	return "openai-codex";
 }
 
@@ -88,8 +78,7 @@ export async function switchToFallbackModel(
 	currentModelSpec: string | null,
 	recovery: LoopRecoveryState,
 ): Promise<{ switched: boolean; modelSpec?: string; reason?: string; recovery: LoopRecoveryState }> {
-	const currentProvider = getProviderFromModelSpec(currentModelSpec);
-	const targetProvider = getAlternateProvider(currentProvider);
+	const targetProvider = getFallbackProvider();
 	const providerCursors = {
 		...createDefaultProviderCursors(),
 		...(recovery.providerCursors ?? {}),

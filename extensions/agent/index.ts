@@ -28,11 +28,13 @@ const DISABLE_ENV = "PI_AGENT_TOOL_DISABLED";
 const MAX_TASKS = 5;
 const MAX_CONCURRENCY = 5;
 
-// Default model priority: global Bedrock Haiku → Codex Spark → global Bedrock Sonnet → Codex Spark
+// Default model priority: GPT-5.5 first, then Codex fallbacks.
 const DEFAULT_MODEL_PRIORITY = [
-	"amazon-bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0",
-	"openai-codex/gpt-5.3-codex-spark",
-	"amazon-bedrock/global.anthropic.claude-sonnet-4-6",
+	"openai-codex/gpt-5.5",
+	"openai-codex/gpt-5.4",
+	"openai-codex/gpt-5.3-codex",
+	"openai-codex/gpt-5.2-codex",
+	"openai-codex/gpt-5.4-mini",
 	"openai-codex/gpt-5.3-codex-spark",
 ];
 

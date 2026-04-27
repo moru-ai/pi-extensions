@@ -50,27 +50,26 @@ export const LOOP_ATTEMPT_STATUSES: readonly LoopAttemptStatus[] = ["baseline", 
 export const ASK_USER_QUESTION_TOOL = "ask_user_question";
 export const AGENT_PROVIDER_ERROR_RETRY_LIMIT = 3;
 export const SEND_MESSAGE_WATCHDOG_MS = 15_000;
-export const AGENT_PROVIDER_IDS: readonly AgentProviderId[] = ["openai-codex", "amazon-bedrock"];
+export const AGENT_PROVIDER_IDS: readonly AgentProviderId[] = ["openai-codex"];
 export const AGENT_PROVIDER_MODEL_ORDER: Record<AgentProviderId, string[]> = {
-	"amazon-bedrock": [
-		"global.anthropic.claude-opus-4-6-v1",
-		"global.anthropic.claude-sonnet-4-6",
-		"global.anthropic.claude-haiku-4-5-20251001-v1:0",
-	],
 	"openai-codex": [
+		"gpt-5.5",
 		"gpt-5.4",
 		"gpt-5.3-codex",
 		"gpt-5.2-codex",
+		"gpt-5.4-mini",
+		"gpt-5.3-codex-spark",
 	],
 };
 export const COMPACT_THRESHOLD_PERCENT = 0.9;
 export const COMPACT_BASE_DELAY_MS = 2_000;
 export const COMPACT_MODELS: string[] = [
-	"amazon-bedrock/global.anthropic.claude-sonnet-4-6",
-	"amazon-bedrock/global.anthropic.claude-opus-4-6-v1",
-	"amazon-bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0",
+	"openai-codex/gpt-5.5",
 	"openai-codex/gpt-5.4",
-	"openai-codex/gpt-5.2",
+	"openai-codex/gpt-5.3-codex",
+	"openai-codex/gpt-5.2-codex",
+	"openai-codex/gpt-5.4-mini",
+	"openai-codex/gpt-5.3-codex-spark",
 ];
 export const COMPACT_INSTRUCTIONS = readFileSync(path.join(EXTENSION_DIR, "compact-prompt.md"), "utf8").trim();
 export const LOOP_INSTRUCTIONS = readFileSync(path.join(EXTENSION_DIR, "loop-instructions.md"), "utf8").trim();

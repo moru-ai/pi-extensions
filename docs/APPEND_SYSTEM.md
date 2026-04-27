@@ -43,7 +43,8 @@ Assume the user is fatigued and has limited cognitive bandwidth. If the answer e
 - `wt` is a CLI for managing git worktrees locally and on workers.
 - Workflow: `wt create <name>` → write exec plan → `wt send <name>` → Discord bot runs exec-plan-loop on worker.
 - Naming convention:
-  - Local: `~/wt/wt-<name>/`
+  - Local default: `~/wt/wt-<name>/`
+  - Local exact path: `wt create <name> --path <path>` for nested or task-scoped workspaces
   - Worker: `~/<repo>-wt/<name>/` (e.g. `~/ai-company-wt/agent-chat/`)
   - Branch: `plan/<name>` (default), or `-b <branch>` for custom.
 - Commands: `wt create`, `wt send`, `wt sync`, `wt list`, `wt clean`.
@@ -53,7 +54,7 @@ Assume the user is fatigued and has limited cognitive bandwidth. If the answer e
 ## Kickoff — New work always starts with a worktree
 
 - When the user starts working on a feature, bug fix, or requirement — **anything that isn't a trivial quick fix on main** — bootstrap a worktree-based workstream.
-- Flow: `wt create <name>` → `cd ~/wt/wt-<name>/` → work → `wt send <name>` → tell Discord bot to run the loop.
+- Flow: `wt create <name>` → `cd ~/wt/wt-<name>/` (or custom `--path`) → work → `wt send <name>` → tell Discord bot to run the loop.
 - If it's not a one-liner fix on main, **almost always** create a worktree.
 - When in doubt, ask: "Should I create a worktree for this?"
 

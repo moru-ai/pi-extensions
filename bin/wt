@@ -31,6 +31,11 @@ repo_root() { git rev-parse --show-toplevel; }
 
 local_wt_path()  { echo "${WT_LOCAL_BASE}/wt-${1}"; }
 remote_wt_base() { echo "/Users/${WT_REMOTE_USER}/${1}-wt"; }
+repo_supports_exec_plans() {
+  local root
+  root=$(repo_root)
+  [[ -f "${root}/PLANS.md" || -d "${root}/docs/exec-plans" ]]
+}
 remote_wt_path() { echo "$(remote_wt_base "$1")/${2}"; }
 remote_repo()    { echo "/Users/${WT_REMOTE_USER}/${1}"; }
 
@@ -45,12 +50,13 @@ require_remote() {
 
 # ─── create ──────────────────────────────────────────────────
 cmd_create() {
-  local name="" base="main" custom_branch=""
+  local name="" base="main" custom_branch="" custom_path=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --branch|-b) custom_branch="$2"; shift 2 ;;
       --base)      base="$2"; shift 2 ;;
+      --path|-p)   custom_path="$2"; shift 2 ;;
       -*)          err "Unknown flag: $1"; exit 1 ;;
       *)
         if [[ -z "$name" ]]; then name="$1"; else base="$1"; fi
@@ -61,13 +67,22 @@ cmd_create() {
   if [[ -z "$name" ]]; then
     err "Usage: wt create <name> [base-branch]"
     err "       wt create <name> --branch <existing-branch>"
+    err "       wt create <name> --path <absolute-or-relative-path>"
     exit 1
   fi
 
   local repo; repo=$(repo_name)
   local root; root=$(repo_root)
   local branch="${custom_branch:-plan/${name}}"
-  local wt; wt=$(local_wt_path "$name")
+  local wt="${custom_path:-$(local_wt_path "$name")}"
+
+  if [[ "$wt" != /* ]]; then
+    wt="$(cd "$root" && mkdir -p . && python3 - <<'PY' "$wt"
+import os, sys
+print(os.path.abspath(sys.argv[1]))
+PY
+)"
+  fi
 
   echo ""
   log "Creating worktree ${BLUE}${name}${NC}"
@@ -104,15 +119,21 @@ cmd_create() {
     log "Hard-linked node_modules"
   fi
 
-  mkdir -p "${wt}/docs/exec-plans/active"
-  mkdir -p "${wt}/docs/exec-plans/artifacts"
+  if repo_supports_exec_plans; then
+    mkdir -p "${wt}/docs/exec-plans/active"
+    mkdir -p "${wt}/docs/exec-plans/artifacts"
+  fi
 
   echo ""
   echo -e "${GREEN}✓ Ready${NC}"
   echo ""
   echo "  cd $wt"
-  echo "  # Write plan → docs/exec-plans/active/<name>.md"
-  echo "  # Then: wt send $name"
+  if repo_supports_exec_plans; then
+    echo "  # Write plan → docs/exec-plans/active/<name>.md"
+    echo "  # Then: wt send $name"
+  else
+    echo "  # Repo worktree ready"
+  fi
   echo ""
 }
 
@@ -218,8 +239,8 @@ REMOTE
       # Create tmux session in the worktree
       tmux new-session -d -s "$SESSION" -c "$WT"
 
-      # Start pi with Bedrock Opus
-      tmux send-keys -t "$SESSION" "pi --provider amazon-bedrock --model global.anthropic.claude-opus-4-6-v1" Enter
+      # Start pi with GPT-5.5
+      tmux send-keys -t "$SESSION" "pi --provider openai-codex --model gpt-5.5" Enter
 
       # Wait for pi to boot, then start the loop
       sleep 8
@@ -435,15 +456,17 @@ case "${1:-help}" in
 wt — Worktree management with optional remote sync
 
 Usage:
-  wt create <name> [base]         Create local worktree + plan/<name> branch
-  wt create <name> -b <branch>    Use existing/custom branch name
+  wt create <name> [base]              Create local worktree + plan/<name> branch
+  wt create <name> -b <branch>         Use existing/custom branch name
+  wt create <name> --path <path>       Create worktree at an exact path
   wt send <name> [-w <host>]      Push + setup worktree on remote
   wt sync <name> [-w <host>]      Quick push + pull (no setup)
   wt list [-w <host>]             Show all worktrees
   wt clean <name> [local|remote|both] [-w <host>]
 
 Naming:
-  Local:     ${WT_LOCAL_BASE:-~/wt}/wt-<name>/
+  Local:     ${WT_LOCAL_BASE:-~/wt}/wt-<name>/   (default)
+  Custom:    wt create <name> --path /some/exact/path
   Remote:    ~/<repo>-wt/<name>/
   Branch:    plan/<name>  (default)
 
@@ -451,10 +474,12 @@ Environment:
   WT_REMOTE_HOST    Default remote host (overridden by -w)
   WT_REMOTE_USER    Remote user (default: \$(whoami))
   WT_LOCAL_BASE     Local worktree base dir (default: ~/wt)
+                   Ignored when --path is provided
 
 Workflow:
   wt create agent-chat            # 1. Create local worktree
   cd ${WT_LOCAL_BASE:-~/wt}/wt-agent-chat
+  wt create api --path ./repos/api # exact-path workflow for nested/meta workspaces
   # Write plan, code, test
   git add -A && git commit -m "plan: agent-chat"
   wt send agent-chat              # 2. Push + setup on default worker

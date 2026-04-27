@@ -48,16 +48,20 @@ pi  # → /start-exec-plan-loop
 
 ### `wt create <name> [base-branch]`
 
-Creates a local worktree at `~/wt/wt-<name>/` with branch `plan/<name>`.
+Creates a local worktree with branch `plan/<name>`.
 
+- Default path: `~/wt/wt-<name>/`
+- Optional exact path: `wt create <name> --path /desired/path`
 - Default base: `main`
-- Symlinks `.env.local` and `node_modules` from the main repo
-- Creates `docs/exec-plans/active/` directory
+- Symlinks `.env.local` and `node_modules` from the main repo when present
+- Creates `docs/exec-plans/active/` only for repos that already use exec plans (`PLANS.md` or `docs/exec-plans/` exists)
 
 ```bash
-wt create agent-chat              # branch: plan/agent-chat, base: main
-wt create pod-refactor develop    # branch: plan/pod-refactor, base: develop
-wt create fix-login -b fix/login  # use custom branch name
+wt create agent-chat                        # branch: plan/agent-chat, base: main
+wt create pod-refactor develop              # branch: plan/pod-refactor, base: develop
+wt create fix-login -b fix/login            # use custom branch name
+wt create api --path ./repos/api            # exact-path workflow for nested/meta workspaces
+wt create rebrand --path ~/vacatio/.tasks/rebrand/vacatio
 ```
 
 ### `wt send <name> [-w <host>]`
@@ -126,7 +130,7 @@ export WT_REMOTE_HOST=worker-1
 export WT_REMOTE_USER=vacatio
 ```
 
-Worktrees are created at `~/wt/wt-<name>/` by default. Override with `WT_LOCAL_BASE`.
+Worktrees are created at `~/wt/wt-<name>/` by default. Override the base with `WT_LOCAL_BASE`, or bypass the convention entirely with `wt create --path <exact-path>` when you need nested task workspaces.
 
 ### Multi-worker
 
