@@ -2,9 +2,10 @@ import { completeSimple } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
 
+import { ASK_USER_QUESTION_TOOL, setAskUserQuestionToolEnabled } from "../loop-runtime";
+
 import {
 	AGENT_PROVIDER_ERROR_RETRY_LIMIT,
-	ASK_USER_QUESTION_TOOL,
 	COMPACT_BASE_DELAY_MS,
 	COMPACT_INSTRUCTIONS,
 	COMPACT_MODELS,
@@ -47,21 +48,6 @@ function getEligibleCompactionModels(ctx: ExtensionContext, requiredTokens: numb
 	}
 
 	return { eligible, skipped };
-}
-
-function setAskUserQuestionToolEnabled(pi: ExtensionAPI, enabled: boolean): "enabled" | "disabled" | "unchanged" | "unavailable" {
-	const active = pi.getActiveTools();
-	const hasTool = active.includes(ASK_USER_QUESTION_TOOL);
-	if (enabled) {
-		if (hasTool) return "unchanged";
-		const available = pi.getAllTools().some((tool) => tool.name === ASK_USER_QUESTION_TOOL);
-		if (!available) return "unavailable";
-		pi.setActiveTools([...active, ASK_USER_QUESTION_TOOL]);
-		return "enabled";
-	}
-	if (!hasTool) return "unchanged";
-	pi.setActiveTools(active.filter((toolName) => toolName !== ASK_USER_QUESTION_TOOL));
-	return "disabled";
 }
 
 function syncLoopToolAvailability(pi: ExtensionAPI, enabled: boolean): "enabled" | "disabled" | "unchanged" | "unavailable" {

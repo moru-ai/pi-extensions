@@ -3,9 +3,11 @@ import * as path from "node:path";
 import { completeSimple } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 
+import { COMPACT_THRESHOLD_PERCENT } from "../exec-plan-loop/constants";
 import { getGitSnapshot } from "../exec-plan-loop/state";
 import type { AgentOutcome } from "../exec-plan-loop/types";
 import { createRunTag, summarizeAgentOutcome, truncate } from "../exec-plan-loop/utils";
+import { setAskUserQuestionToolEnabled, type ToolAvailabilityChange } from "../loop-runtime";
 
 const RALPH_ROOT = "ralph-loop";
 const COMPLETE_MARKER = "<promise>COMPLETE</promise>";
@@ -13,6 +15,11 @@ const LOOP_MARKER_PREFIX = "RALPH_LOOP_NAME:";
 const NAME_MODEL_PROVIDER = "openai-codex";
 const NAME_MODEL_ID = "gpt-5.3-codex-spark";
 const NAME_GENERATION_TIMEOUT_MS = 5_000;
+const RALPH_COMPACT_INSTRUCTIONS = [
+	"Summarize the active Ralph prompt loops so they can continue after compaction.",
+	"Preserve loop names, original prompts, optional args, iteration counts, completion marker requirements, current repo state, last actions, blockers, and any verification evidence.",
+	"Keep the summary concise but sufficient for continuing each named loop without relying on hidden memory.",
+].join("\n");
 
 type RalphTurnStatus = AgentOutcome["status"] | "baseline" | "stopped" | "complete";
 
@@ -294,7 +301,7 @@ async function generateLoopName(ctx: ExtensionContext, prompt: string, args: str
 	}
 }
 
-async function buildPrompt(pi: ExtensionAPI, state: RalphState, options?: { postErrorContinue?: boolean }): Promise<string> {
+async function buildPrompt(pi: ExtensionAPI, state: RalphState, options?: { postErrorContinue?: boolean; postCompaction?: boolean }): Promise<string> {
 	const git = await getGitSnapshot(pi).catch(() => null);
 	const lines = [
 		`${LOOP_MARKER_PREFIX} ${state.name}`,
@@ -333,6 +340,9 @@ async function buildPrompt(pi: ExtensionAPI, state: RalphState, options?: { post
 	if (options?.postErrorContinue) {
 		lines.push("", "The previous turn appears to have ended with a provider/runtime error. Continue from the last known state if possible.");
 	}
+	if (options?.postCompaction) {
+		lines.push("", "Context was just compacted. Re-read any files you need before editing; do not rely only on memory.");
+	}
 	return lines.join("\n");
 }
 
@@ -354,10 +364,56 @@ function updateStatus(ctx: ExtensionContext): void {
 
 export default function ralph(pi: ExtensionAPI) {
 	const runtimeActive = new Set<string>();
+	let compactionInProgress = false;
 
-	function sendLoopPrompt(name: string, content: string): void {
+	function notifyToolAvailability(ctx: ExtensionContext, change: ToolAvailabilityChange): void {
+		if (!ctx.hasUI || change === "unchanged") return;
+		if (change === "disabled") ctx.ui.notify("Ralph loop active: ask_user_question tool disabled for the agent.", "info");
+		else if (change === "enabled") ctx.ui.notify("Ralph loop inactive: ask_user_question tool restored for the agent.", "info");
+		else ctx.ui.notify("ask_user_question tool could not be restored because it is not currently registered.", "warning");
+	}
+
+	function syncAskUserQuestionTool(ctx: ExtensionContext): void {
+		const shouldDisable = runtimeActive.size > 0;
+		const change = setAskUserQuestionToolEnabled(pi, !shouldDisable);
+		notifyToolAvailability(ctx, change);
+	}
+
+	function sendLoopPrompt(name: string, content: string, ctx: ExtensionContext): void {
 		runtimeActive.add(name);
+		syncAskUserQuestionTool(ctx);
 		pi.sendUserMessage(content, { deliverAs: "followUp" });
+	}
+
+	function shouldCompact(ctx: ExtensionContext): boolean {
+		const usage = ctx.getContextUsage();
+		return Boolean(usage && usage.tokens !== null && usage.contextWindow > 0 && usage.tokens > usage.contextWindow * COMPACT_THRESHOLD_PERCENT);
+	}
+
+	function triggerCompaction(ctx: ExtensionContext): void {
+		if (compactionInProgress || runtimeActive.size === 0) return;
+		compactionInProgress = true;
+		if (ctx.hasUI) ctx.ui.notify("Ralph auto-compaction started.", "info");
+		ctx.compact({
+			customInstructions: RALPH_COMPACT_INSTRUCTIONS,
+			onComplete: async () => {
+				compactionInProgress = false;
+				if (ctx.hasUI) ctx.ui.notify("Ralph auto-compaction completed.", "info");
+				for (const name of [...runtimeActive]) {
+					const activeState = loadState(ctx, name);
+					if (!activeState?.enabled) {
+						runtimeActive.delete(name);
+						continue;
+					}
+					sendLoopPrompt(name, await buildPrompt(pi, activeState, { postCompaction: true }), ctx);
+				}
+				syncAskUserQuestionTool(ctx);
+			},
+			onError: (error) => {
+				compactionInProgress = false;
+				if (ctx.hasUI) ctx.ui.notify(`Ralph auto-compaction failed: ${error.message}`, "warning");
+			},
+		});
 	}
 
 	async function startLoop(name: string, prompt: string, maxIterations: number, args: string | null, ctx: ExtensionContext): Promise<RalphState> {
@@ -378,13 +434,14 @@ export default function ralph(pi: ExtensionAPI) {
 		saveState(ctx, state);
 		appendEvent(ctx, name, { type: "loop_start", runTag: state.runTag, maxIterations, prompt: truncate(prompt), args });
 		updateStatus(ctx);
-		sendLoopPrompt(name, await buildPrompt(pi, state));
+		sendLoopPrompt(name, await buildPrompt(pi, state), ctx);
 		return state;
 	}
 
 	function stopLoop(ctx: ExtensionContext, name: string): void {
 		fs.rmSync(loopDir(ctx, name), { recursive: true, force: true });
 		runtimeActive.delete(name);
+		syncAskUserQuestionTool(ctx);
 		updateStatus(ctx);
 		if (ctx.hasUI) ctx.ui.notify(`Stopped and removed Ralph loop '${name}'.`, "info");
 	}
@@ -392,12 +449,14 @@ export default function ralph(pi: ExtensionAPI) {
 	function stopAllLoops(ctx: ExtensionContext): void {
 		fs.rmSync(rootDir(ctx), { recursive: true, force: true });
 		runtimeActive.clear();
+		syncAskUserQuestionTool(ctx);
 		updateStatus(ctx);
 		if (ctx.hasUI) ctx.ui.notify("Stopped and removed all Ralph loops.", "info");
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
 		runtimeActive.clear();
+		syncAskUserQuestionTool(ctx);
 		updateStatus(ctx);
 		const active = listStates(ctx).filter((state) => state.enabled);
 		if (active.length > 0 && ctx.hasUI) {
@@ -422,7 +481,7 @@ export default function ralph(pi: ExtensionAPI) {
 					saveState(ctx, existing);
 					appendEvent(ctx, existing.name, { type: "loop_resume", runTag: existing.runTag, iteration: existing.iteration });
 					updateStatus(ctx);
-					sendLoopPrompt(existing.name, await buildPrompt(pi, existing));
+					sendLoopPrompt(existing.name, await buildPrompt(pi, existing), ctx);
 					return;
 				}
 			}
@@ -476,6 +535,7 @@ export default function ralph(pi: ExtensionAPI) {
 		const current = loadState(ctx, name);
 		if (!current?.enabled) {
 			runtimeActive.delete(name);
+			syncAskUserQuestionTool(ctx);
 			updateStatus(ctx);
 			return;
 		}
@@ -500,6 +560,7 @@ export default function ralph(pi: ExtensionAPI) {
 			next.enabled = false;
 			saveState(ctx, next);
 			runtimeActive.delete(name);
+			syncAskUserQuestionTool(ctx);
 			appendEvent(ctx, name, { type: "loop_complete", runTag: next.runTag, iteration: next.iteration });
 			updateStatus(ctx);
 			if (ctx.hasUI) ctx.ui.notify(`Ralph loop '${name}' complete after ${next.iteration} iterations.`, "info");
@@ -511,6 +572,7 @@ export default function ralph(pi: ExtensionAPI) {
 			next.lastTurn = { ...next.lastTurn, status: "stopped", summary: `Ralph loop stopped at max iterations (${next.maxIterations}).` };
 			saveState(ctx, next);
 			runtimeActive.delete(name);
+			syncAskUserQuestionTool(ctx);
 			appendEvent(ctx, name, { type: "loop_stop", reason: "max_iterations", runTag: next.runTag, iteration: next.iteration });
 			updateStatus(ctx);
 			if (ctx.hasUI) ctx.ui.notify(`Ralph loop '${name}' stopped at max iterations (${next.maxIterations}).`, "warning");
@@ -520,8 +582,12 @@ export default function ralph(pi: ExtensionAPI) {
 		saveState(ctx, next);
 		appendEvent(ctx, name, { type: "iteration_end", runTag: next.runTag, iteration: next.iteration, status: outcome.status, summary: truncate(outcome.summary) });
 		updateStatus(ctx);
-		if (outcome.shouldSendPlainContinue) sendLoopPrompt(name, "continue");
-		else sendLoopPrompt(name, await buildPrompt(pi, next));
+		if (shouldCompact(ctx)) {
+			triggerCompaction(ctx);
+			return;
+		}
+		if (outcome.shouldSendPlainContinue) sendLoopPrompt(name, "continue", ctx);
+		else sendLoopPrompt(name, await buildPrompt(pi, next), ctx);
 		if (ctx.hasUI) ctx.ui.notify(`Ralph loop '${name}' continuing (#${next.iteration}).`, outcome.status === "error" ? "warning" : "info");
 	});
 }

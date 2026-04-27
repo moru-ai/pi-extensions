@@ -47,7 +47,6 @@ export const MAX_STATUS_LINES = 6;
 export const MAX_TOOL_ERRORS = 3;
 export const MAX_TEXT_LENGTH = 280;
 export const LOOP_ATTEMPT_STATUSES: readonly LoopAttemptStatus[] = ["baseline", "progress", "error", "stopped"];
-export const ASK_USER_QUESTION_TOOL = "ask_user_question";
 export const AGENT_PROVIDER_ERROR_RETRY_LIMIT = 3;
 export const SEND_MESSAGE_WATCHDOG_MS = 15_000;
 export const AGENT_PROVIDER_IDS: readonly AgentProviderId[] = ["openai-codex"];
