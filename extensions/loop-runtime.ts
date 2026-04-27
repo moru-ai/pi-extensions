@@ -18,3 +18,7 @@ export function setAskUserQuestionToolEnabled(pi: ExtensionAPI, enabled: boolean
 	pi.setActiveTools(active.filter((toolName) => toolName !== ASK_USER_QUESTION_TOOL));
 	return "disabled";
 }
+
+// pi loads top-level files in extensions/ as extensions. This helper is imported
+// by real extensions, so expose a no-op default factory to keep discovery valid.
+export default function loopRuntime(_pi: ExtensionAPI): void {}
