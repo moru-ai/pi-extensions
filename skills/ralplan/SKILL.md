@@ -7,7 +7,7 @@ description: Consensus planning for Ralph execution. Turns a deep-interview arti
 
 RALPLAN is consensus planning before Ralph execution. It coordinates Planner, Architect, and Critic review until the plan is clear, testable, and ready for `/start-ralph-loop`.
 
-This skill plans only. It does not implement. It does not start Ralph unless the user explicitly asks after the planning artifacts are written.
+This skill plans only. It does not implement. It starts Ralph only when the user explicitly asks, such as with `--start`, "start Ralph after planning", or interactive approval.
 
 Durable outputs:
 
@@ -43,6 +43,7 @@ Do not start Ralph from a parent directory or different project; relative paths 
 
 - `--interactive`: pause for user feedback at draft-review and final-approval points.
 - `--deliberate`: force deliberate mode for high-risk work.
+- `--start`: after artifacts are written and quality-gated, start Ralph automatically with `ralph_start`.
 
 Auto-enable deliberate mode when the request signals high risk:
 
@@ -392,7 +393,19 @@ After writing the artifacts, respond with:
 /start-ralph-loop .ralph/<slug>.md
 ```
 
-If the user explicitly approved execution in interactive mode, you may start Ralph with `ralph_start` using the final plan content. Otherwise stop after planning.
+If the user passed `--start`, explicitly asked to start Ralph after planning, or approved execution in interactive mode, start Ralph yourself with `ralph_start` after writing the artifacts:
+
+```ts
+ralph_start({
+  name: "<slug>",
+  taskContent: "<exact contents of .ralph/<slug>.md>",
+  itemsPerIteration: 2,
+  reflectEvery: 5,
+  maxIterations: 50
+})
+```
+
+Before calling `ralph_start`, verify the current pi cwd is the repository root where the `.ralph/` artifacts were written. If cwd is wrong, do not start; tell the user to restart pi from the correct repo root.
 
 ## Scenario handling
 
