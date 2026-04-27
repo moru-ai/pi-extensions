@@ -595,18 +595,30 @@ Examples:
 		},
 	});
 
+	const startOptionCompletions = (prefix: string) => {
+		const items = [
+			{ value: "--items-per-iteration ", label: "--items-per-iteration N", description: "Suggest N checklist items per iteration" },
+			{ value: "--reflect-every ", label: "--reflect-every N", description: "Ask Ralph to self-reflect every N iterations" },
+			{ value: "--max-iterations ", label: "--max-iterations N", description: "Stop after N iterations" },
+		];
+		const normalizedPrefix = prefix.trimStart();
+		if (!normalizedPrefix.startsWith("--")) return items;
+		return items.filter((item) => item.label.startsWith(normalizedPrefix));
+	};
+
 	pi.registerCommand("start-ralph-loop", {
-		description: "Start a Ralph loop",
+		description: "<name|path> [--items-per-iteration N] [--reflect-every N] [--max-iterations N] — Start a Ralph loop",
+		getArgumentCompletions: startOptionCompletions,
 		handler: async (args, ctx) => commands.start(args, ctx),
 	});
 
 	pi.registerCommand("pause-ralph-loop", {
-		description: "Pause current Ralph loop",
+		description: "Pause current Ralph loop without completing it",
 		handler: async (args, ctx) => commands.stop(args, ctx),
 	});
 
 	pi.registerCommand("resume-ralph-loop", {
-		description: "Resume a paused Ralph loop",
+		description: "<name> — Resume a paused Ralph loop",
 		handler: async (args, ctx) => commands.resume(args, ctx),
 	});
 
@@ -621,27 +633,27 @@ Examples:
 	});
 
 	pi.registerCommand("cancel-ralph-loop", {
-		description: "Delete Ralph loop state",
+		description: "<name> — Delete Ralph loop state",
 		handler: async (args, ctx) => commands.cancel(args, ctx),
 	});
 
 	pi.registerCommand("archive-ralph-loop", {
-		description: "Archive a Ralph loop",
+		description: "<name> — Archive a Ralph loop",
 		handler: async (args, ctx) => commands.archive(args, ctx),
 	});
 
 	pi.registerCommand("clean-ralph-loop", {
-		description: "Clean completed Ralph loops",
+		description: "[--all] — Clean completed Ralph loops",
 		handler: async (args, ctx) => commands.clean(args, ctx),
 	});
 
 	pi.registerCommand("list-ralph-loop", {
-		description: "List Ralph loops",
+		description: "[--archived] — List Ralph loops",
 		handler: async (args, ctx) => commands.list(args, ctx),
 	});
 
 	pi.registerCommand("nuke-ralph-loop", {
-		description: "Delete all .ralph data",
+		description: "[--yes] — Delete all .ralph data",
 		handler: async (args, ctx) => commands.nuke(args, ctx),
 	});
 
