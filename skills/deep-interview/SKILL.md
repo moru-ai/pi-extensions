@@ -4,7 +4,7 @@ description: Socratic deep interview with ambiguity gating before planning or im
 argument-hint: "[--quick|--standard|--deep] <idea or vague description>"
 metadata:
   author: moru-ai
-  version: "1.1.0"
+  version: "1.1.2"
   inspired_by: "Yeachan-Heo/oh-my-codex deep-interview and Q00/ouroboros interview workflows"
 ---
 
@@ -48,11 +48,17 @@ If no flag is provided, use **Standard**.
 - Do not rotate to a new clarity dimension just for coverage when the current answer is still vague. Stay on the same thread until one layer deeper, one assumption clearer, or one boundary tighter.
 - Before closing the interview, complete at least one explicit pressure pass that revisits an earlier answer with a deeper, assumption-focused, or tradeoff-focused follow-up.
 - Gather codebase facts with available read/search tools before asking the user about internals.
+- For brownfield work, do a real repository reconnaissance pass before the first question: map likely touchpoints, relevant conventions, tests, docs, and analogous implementations. Start broad enough to avoid missing adjacent systems, then narrow to evidence directly relevant to the interview.
+- When the `agent` tool is available and brownfield context is uncertain, cross-cutting, or likely to span multiple directories/modules, delegate repository exploration to one or more child agents before questioning. Prefer `explorer` for fast codebase reconnaissance and `general-purpose` for deeper synthesis. Use agents only to collect/summarize evidence; keep the Socratic interview with the user in the main thread.
 - Reduce user effort: ask only the highest-leverage unresolved question, and never ask the user for codebase facts that can be discovered directly.
 - For brownfield work, prefer evidence-backed confirmation questions such as: "I found X in Y. Should this change follow that pattern?"
 - Re-score ambiguity after each answer and show progress transparently.
 - Do not recommend execution while ambiguity remains above threshold unless the user explicitly opts to proceed with a warning.
+- Be conservative when lowering ambiguity: prefer to keep the score higher until answers are concrete, evidence-backed, and bounded. Do not treat plausible inference, polite agreement, or a single shallow answer as clarity.
+- Avoid large ambiguity drops: do not reduce total ambiguity by more than `0.20` after a single answer unless the user provides unusually complete, testable requirements covering intent, scope, non-goals, decision boundaries, and success criteria.
+- Do not score any clarity dimension above `0.80` based on inference alone; require explicit user confirmation, concrete examples, evidence, or testable criteria.
 - Do not close the interview while `Non-goals` or `Decision Boundaries` remain unresolved, even if the weighted ambiguity threshold is met, unless the user explicitly accepts the residual risk.
+- Do not close the interview merely because the weighted threshold is met; close only when readiness gates are explicit, context confidence is adequate, and remaining unknowns are low-risk or accepted by the user.
 - Treat early exit as a safety valve, not the default success path.
 - Save the interview transcript under the current repository's `.pi/deep-interview/` directory. The transcript is the only required artifact; this skill focuses on lowering ambiguity, not managing runtime state.
 </Execution_Policy>
@@ -65,7 +71,11 @@ If no flag is provided, use **Standard**.
 2. Detect whether the task is **greenfield** or **brownfield**:
    - Greenfield: no existing codebase or existing behavior is relevant.
    - Brownfield: existing code, docs, deployed behavior, conventions, or compatibility constraints matter.
-3. If brownfield, collect relevant codebase context before questioning. Use available read/search tools. Keep the search narrow and concrete.
+3. If brownfield, collect relevant codebase context before questioning:
+   - Run a repository reconnaissance pass that is broad enough to identify likely touchpoints, naming patterns, architecture boundaries, existing tests, docs, and analogous implementations.
+   - Then narrow to the files, symbols, behaviors, and conventions most relevant to the user's request.
+   - If the likely touchpoints are unknown, cross-cutting, or spread across multiple areas, use the `agent` tool when available to delegate exploration before asking the first interview question. Example child-agent assignments: "map relevant modules", "find analogous implementations", "inspect tests/docs/contracts".
+   - Record evidence-backed findings and uncertainty in the interview ledger; do not ask the user to provide facts that repo exploration can discover.
 4. If the initial context is too large for safe prompt use, ask for a concise summary first. This is a blocking gate: do not score ambiguity, continue normal interview rounds, close the interview, or recommend execution until the summary is captured. The summary must preserve goals, constraints, success criteria, non-goals, decision boundaries, and references to any full source documents.
 5. Initialize an interview ledger with:
    - task statement
@@ -87,10 +97,13 @@ If no flag is provided, use **Standard**.
    - deep: threshold `0.15`, max rounds `20`
 3. Announce kickoff with profile, threshold, and the current ambiguity assumption.
 4. Start with `current_ambiguity = 1.0` unless enough context already exists to score lower.
+5. For brownfield work, do not score Context Clarity above `0.60` until repository reconnaissance has found concrete files/symbols/patterns, and do not score it above `0.80` until likely tests/docs/contracts or analogous implementations have been checked or explicitly marked irrelevant.
 
 ## Phase 2: Socratic Interview Loop
 
-Repeat until ambiguity `<= threshold`, the pressure pass is complete, readiness gates are explicit, the user exits with warning, or max rounds are reached.
+Repeat until ambiguity `<= threshold`, the pressure pass is complete, readiness gates are explicit, minimum interview depth is satisfied, the user exits with warning, or max rounds are reached.
+
+Minimum interview depth: Quick requires at least 3 rounds; Standard requires at least 5 rounds; Deep requires at least 7 rounds. Only bypass this minimum when the user explicitly stops/exits with residual-risk warning, or when the initial brief already includes explicit intent, outcome, scope, non-goals, decision boundaries, constraints, acceptance criteria, and brownfield evidence if applicable.
 
 ### 2a) Generate next question
 
@@ -162,7 +175,10 @@ Readiness gate:
 - `Non-goals` must be explicit.
 - `Decision Boundaries` must be explicit.
 - A pressure pass must be complete: at least one earlier answer has been revisited with an evidence, assumption, or tradeoff follow-up.
-- If any gate is unresolved, or the pressure pass is incomplete, continue interviewing even when weighted ambiguity is below threshold.
+- Brownfield context confidence must be explicit: likely touchpoints, relevant conventions, and tests/docs/contracts are either identified or explicitly ruled out.
+- At least two concrete acceptance signals must be recorded, unless the user explicitly accepts a looser exploratory outcome.
+- Minimum interview depth must be satisfied for the selected profile.
+- If any gate is unresolved, the pressure pass is incomplete, or minimum depth is unmet, continue interviewing even when weighted ambiguity is below threshold.
 
 ### 2d) Report progress
 
@@ -234,6 +250,7 @@ If the interview ended by early exit, hard-cap completion, or above-threshold pr
 
 <Tool_Usage>
 - Use available read/search tools for codebase fact gathering.
+- Use the `agent` tool for brownfield repository exploration when the relevant context is uncertain, cross-cutting, or likely to span multiple directories/modules.
 - Use `ask_user_question` for structured user decisions when available.
 - Save the transcript under `.pi/deep-interview/{slug}/transcript.md`.
 - Record whether oversized initial context summary is not needed, pending, or satisfied before scoring or closeout.
@@ -243,7 +260,7 @@ If the interview ended by early exit, hard-cap completion, or above-threshold pr
 - User says stop/cancel/abort: save a partial transcript if useful and stop.
 - Ambiguity stalls for 3 rounds (+/- 0.05): force Ontologist mode once.
 - Max rounds reached: proceed only with explicit residual-risk warning.
-- All dimensions >= 0.9: allow early closeout even before max rounds.
+- All dimensions >= 0.9: allow early closeout only if readiness gates are explicit, context confidence is adequate, acceptance signals are concrete, and remaining unknowns are low-risk or accepted by the user.
 </Escalation_And_Stop_Conditions>
 
 <Final_Checklist>
@@ -256,6 +273,8 @@ If the interview ended by early exit, hard-cap completion, or above-threshold pr
 - [ ] At least one persistent follow-up / pressure pass deepened a prior answer.
 - [ ] Challenge modes triggered at thresholds when applicable.
 - [ ] Transcript written to `.pi/deep-interview/{slug}/transcript.md`.
+- [ ] Brownfield preflight explored the repository deeply enough to identify likely touchpoints, conventions, tests/docs/contracts, and analogous implementations before asking user questions about internals.
+- [ ] Child agents were used for brownfield exploration when context was uncertain, cross-cutting, or multi-module and the `agent` tool was available.
 - [ ] Brownfield questions use evidence-backed confirmation when applicable.
 - [ ] Final response summarizes ambiguity reduction and recommended next step.
 - [ ] No direct implementation performed in this mode.
