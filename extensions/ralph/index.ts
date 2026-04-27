@@ -190,6 +190,44 @@ export default function (pi: ExtensionAPI) {
 		return `${l.name}: ${status} (iteration ${iter})`;
 	}
 
+	function installRalphAutocomplete(ctx: ExtensionContext): void {
+		if (!ctx.hasUI) return;
+		const commandSuggestions = [
+			{ value: "/start-ralph-loop ", label: "start-ralph-loop <name|path> [--items-per-iteration N] [--reflect-every N] [--max-iterations N]", description: "Start a new Ralph loop" },
+			{ value: "/pause-ralph-loop", label: "pause-ralph-loop", description: "Pause the current Ralph loop without completing it" },
+			{ value: "/resume-ralph-loop ", label: "resume-ralph-loop <name>", description: "Resume a paused Ralph loop" },
+			{ value: "/stop-ralph-loop", label: "stop-ralph-loop", description: "Stop the active Ralph loop" },
+			{ value: "/status-ralph-loop", label: "status-ralph-loop", description: "Show Ralph loops" },
+			{ value: "/list-ralph-loop ", label: "list-ralph-loop [--archived]", description: "List Ralph loops" },
+			{ value: "/archive-ralph-loop ", label: "archive-ralph-loop <name>", description: "Archive a Ralph loop" },
+			{ value: "/clean-ralph-loop ", label: "clean-ralph-loop [--all]", description: "Clean completed Ralph loops" },
+			{ value: "/cancel-ralph-loop ", label: "cancel-ralph-loop <name>", description: "Delete Ralph loop state" },
+			{ value: "/nuke-ralph-loop ", label: "nuke-ralph-loop [--yes]", description: "Delete all .ralph data" },
+		];
+
+		ctx.ui.addAutocompleteProvider((current) => ({
+			async getSuggestions(lines, cursorLine, cursorCol, options) {
+				const line = lines[cursorLine] ?? "";
+				const beforeCursor = line.slice(0, cursorCol);
+				const match = beforeCursor.match(/^\/([a-zA-Z0-9-]*)$/);
+				if (!match) return current.getSuggestions(lines, cursorLine, cursorCol, options);
+
+				const query = match[1] ?? "";
+				if (!query.includes("ralph")) return current.getSuggestions(lines, cursorLine, cursorCol, options);
+
+				const items = commandSuggestions.filter((item) => item.label.includes(query) || item.value.slice(1).startsWith(query));
+				if (items.length === 0) return current.getSuggestions(lines, cursorLine, cursorCol, options);
+				return { prefix: `/${query}`, items };
+			},
+			applyCompletion(lines, cursorLine, cursorCol, item, prefix) {
+				return current.applyCompletion(lines, cursorLine, cursorCol, item, prefix);
+			},
+			shouldTriggerFileCompletion(lines, cursorLine, cursorCol) {
+				return current.shouldTriggerFileCompletion?.(lines, cursorLine, cursorCol) ?? true;
+			},
+		}));
+	}
+
 	function updateUI(ctx: ExtensionContext): void {
 		if (!ctx.hasUI) return;
 
@@ -844,6 +882,7 @@ Examples:
 	});
 
 	pi.on("session_start", async (_event, ctx) => {
+		installRalphAutocomplete(ctx);
 		const active = listLoops(ctx).filter((l) => l.status === "active");
 
 		// Rehydrate currentLoop from disk. The module is re-initialized on
