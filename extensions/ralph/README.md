@@ -22,21 +22,8 @@ Use `exec-plan-loop` for checklist-driven, plan-backed, validation-heavy, or mul
 | `/start-ralph-loop "prompt" [--name NAME] [--max-iterations N] [-- extra args]` | Start a prompt loop; name is auto-generated unless `--name` is passed |
 | `/start-ralph-loop <name>` | Resume a persisted active loop |
 | `/status-ralph-loop` | Show all loop states |
-| `/stop-ralph-loop <name>` | Stop one loop |
-| `/cancel-ralph-loop <name>` | Delete one loop state |
-| `/cancel-ralph-loop --all` | Delete all Ralph loop state |
-
-## Agent tool
-
-The agent can start a loop with `ralph_start`:
-
-```json
-{
-  "prompt": "Fix the small issue and keep going until done",
-  "args": "optional extra context",
-  "maxIterations": 50
-}
-```
+| `/stop-ralph-loop <name>` | Stop and remove one loop |
+| `/stop-ralph-loop --all` | Stop and remove all Ralph loop state |
 
 ## Completion marker
 

@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { completeSimple } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Type } from "@sinclair/typebox";
 
 import { getGitSnapshot } from "../exec-plan-loop/state";
 import type { AgentOutcome } from "../exec-plan-loop/types";
@@ -383,25 +382,18 @@ export default function ralph(pi: ExtensionAPI) {
 		return state;
 	}
 
-	function stopLoop(ctx: ExtensionContext, name: string, summary = "Ralph loop stopped by user."): void {
-		const state = loadState(ctx, name);
-		if (!state?.enabled) {
-			runtimeActive.delete(name);
-			if (ctx.hasUI) ctx.ui.notify(`Ralph loop '${name}' is not running.`, "info");
-			updateStatus(ctx);
-			return;
-		}
-		const next: RalphState = {
-			...state,
-			enabled: false,
-			updatedAt: new Date().toISOString(),
-			lastTurn: { ...(state.lastTurn ?? { toolErrors: [] }), status: "stopped", summary, toolErrors: state.lastTurn?.toolErrors ?? [] },
-		};
-		saveState(ctx, next);
+	function stopLoop(ctx: ExtensionContext, name: string): void {
+		fs.rmSync(loopDir(ctx, name), { recursive: true, force: true });
 		runtimeActive.delete(name);
-		appendEvent(ctx, name, { type: "loop_stop", reason: "user", summary });
 		updateStatus(ctx);
-		if (ctx.hasUI) ctx.ui.notify(summary, "info");
+		if (ctx.hasUI) ctx.ui.notify(`Stopped and removed Ralph loop '${name}'.`, "info");
+	}
+
+	function stopAllLoops(ctx: ExtensionContext): void {
+		fs.rmSync(rootDir(ctx), { recursive: true, force: true });
+		runtimeActive.clear();
+		updateStatus(ctx);
+		if (ctx.hasUI) ctx.ui.notify("Stopped and removed all Ralph loops.", "info");
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
@@ -445,8 +437,15 @@ export default function ralph(pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("stop-ralph-loop", {
-		description: "<name> — Stop a named Ralph loop",
-		handler: async (args, ctx) => stopLoop(ctx, sanitizeName(args.trim() || "default")),
+		description: "<name|--all> — Stop and remove Ralph loop state",
+		handler: async (args, ctx) => {
+			const raw = args.trim();
+			if (raw === "--all") {
+				stopAllLoops(ctx);
+				return;
+			}
+			stopLoop(ctx, sanitizeName(raw || "default"));
+		},
 	});
 
 	pi.registerCommand("status-ralph-loop", {
@@ -469,47 +468,6 @@ export default function ralph(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("cancel-ralph-loop", {
-		description: "<name|--all> — Delete Ralph loop state",
-		handler: async (args, ctx) => {
-			const raw = args.trim();
-			if (raw === "--all") {
-				fs.rmSync(rootDir(ctx), { recursive: true, force: true });
-				runtimeActive.clear();
-				updateStatus(ctx);
-				if (ctx.hasUI) ctx.ui.notify("Deleted all Ralph loop state.", "info");
-				return;
-			}
-			const name = sanitizeName(raw || "default");
-			fs.rmSync(loopDir(ctx, name), { recursive: true, force: true });
-			runtimeActive.delete(name);
-			updateStatus(ctx);
-			if (ctx.hasUI) ctx.ui.notify(`Deleted Ralph loop '${name}'.`, "info");
-		},
-	});
-
-	pi.registerTool({
-		name: "ralph_start",
-		label: "Start Ralph Loop",
-		description: "Start a named simple prompt loop that repeats until the assistant outputs the completion marker.",
-		promptSnippet: "Start a named simple Ralph prompt loop.",
-		promptGuidelines: [
-			"Use this only when the user explicitly wants a simple repeated prompt loop.",
-			"Omit name to auto-generate a namespace with the Spark naming model; pass name when the user gave a stable name.",
-			"Use exec-plan-loop for complex checklist/planning workflows.",
-		],
-		parameters: Type.Object({
-			name: Type.Optional(Type.String({ description: "Optional loop namespace/name" })),
-			prompt: Type.String({ description: "Prompt to repeat until complete" }),
-			args: Type.Optional(Type.String({ description: "Optional extra arguments/context for the loop" })),
-			maxIterations: Type.Optional(Type.Number({ description: "Max iterations before stopping", default: 50 })),
-		}),
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const name = params.name ? uniqueName(ctx, params.name) : await generateLoopName(ctx, params.prompt, params.args ?? null);
-			await startLoop(name, params.prompt, params.maxIterations ?? 50, params.args ?? null, ctx);
-			return { content: [{ type: "text", text: `Started Ralph loop '${name}'.` }], details: {} };
-		},
-	});
 
 	pi.on("agent_end", async (event, ctx) => {
 		const name = extractLoopNameFromMessages(event.messages);
