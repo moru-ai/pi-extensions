@@ -355,7 +355,10 @@ function updateStatus(ctx: ExtensionContext): void {
 		return;
 	}
 	const { theme } = ctx.ui;
-	ctx.ui.setStatus("ralph", theme.fg("accent", `🔁 ralph ${active.length}`));
+	const statusText = active.length === 1
+		? `🔁 ralph ${active[0].iteration}/${active[0].maxIterations}`
+		: `🔁 ralph ${active.length} loops`;
+	ctx.ui.setStatus("ralph", theme.fg("accent", statusText));
 	ctx.ui.setWidget("ralph", [
 		theme.fg("accent", theme.bold("Ralph loops")),
 		...active.map((state) => theme.fg("dim", `${state.name}: ${state.iteration}/${state.maxIterations} — ${truncate(state.prompt, 80)}`)),
