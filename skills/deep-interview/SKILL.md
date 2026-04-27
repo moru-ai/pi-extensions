@@ -4,7 +4,7 @@ description: Socratic deep interview with ambiguity gating before planning or im
 argument-hint: "[--quick|--standard|--deep] <idea or vague description>"
 metadata:
   author: moru-ai
-  version: "1.1.2"
+  version: "1.1.3"
   inspired_by: "Yeachan-Heo/oh-my-codex deep-interview and Q00/ouroboros interview workflows"
 ---
 
@@ -103,7 +103,7 @@ If no flag is provided, use **Standard**.
 
 Repeat until ambiguity `<= threshold`, the pressure pass is complete, readiness gates are explicit, minimum interview depth is satisfied, the user exits with warning, or max rounds are reached.
 
-Minimum interview depth: Quick requires at least 3 rounds; Standard requires at least 5 rounds; Deep requires at least 7 rounds. Only bypass this minimum when the user explicitly stops/exits with residual-risk warning, or when the initial brief already includes explicit intent, outcome, scope, non-goals, decision boundaries, constraints, acceptance criteria, and brownfield evidence if applicable.
+Minimum interview depth: Quick requires at least 4 rounds; Standard requires at least 8 rounds; Deep requires at least 12 rounds. Treat these as floors, not targets: continue past the floor whenever ambiguity, readiness gates, context confidence, or acceptance criteria remain weak. Only bypass this minimum when the user explicitly stops/exits with residual-risk warning, or when the initial brief already includes explicit intent, outcome, scope, non-goals, decision boundaries, constraints, acceptance criteria, and brownfield evidence if applicable.
 
 ### 2a) Generate next question
 
@@ -177,7 +177,7 @@ Readiness gate:
 - A pressure pass must be complete: at least one earlier answer has been revisited with an evidence, assumption, or tradeoff follow-up.
 - Brownfield context confidence must be explicit: likely touchpoints, relevant conventions, and tests/docs/contracts are either identified or explicitly ruled out.
 - At least two concrete acceptance signals must be recorded, unless the user explicitly accepts a looser exploratory outcome.
-- Minimum interview depth must be satisfied for the selected profile.
+- Minimum interview depth must be satisfied for the selected profile; treat the floor as a guardrail against premature closure, not as a reason to close.
 - If any gate is unresolved, the pressure pass is incomplete, or minimum depth is unmet, continue interviewing even when weighted ambiguity is below threshold.
 
 ### 2d) Report progress
