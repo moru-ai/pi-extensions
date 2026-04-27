@@ -321,6 +321,13 @@ export default function (pi: ExtensionAPI) {
 
 			const fullPath = path.resolve(ctx.cwd, taskFile);
 			if (!fs.existsSync(fullPath)) {
+				if (isPath) {
+					ctx.ui.notify(
+						`Task file not found: ${taskFile}. Ralph resolves relative paths from ${ctx.cwd}. Run /start-ralph-loop from the repo root that contains the task file, or pass the correct path.`,
+						"error",
+					);
+					return;
+				}
 				ensureDir(fullPath);
 				fs.writeFileSync(fullPath, DEFAULT_TEMPLATE, "utf-8");
 				ctx.ui.notify(`Created task file: ${taskFile}`, "info");

@@ -31,11 +31,13 @@ or:
 /skill:ralplan <interview artifact path | clarified task>
 ```
 
-Then execute with:
+Then execute from the same repository root where the artifacts were written:
 
 ```text
 /start-ralph-loop <plan-path>
 ```
+
+Do not start Ralph from a parent directory or different project; relative paths are resolved from the current pi session cwd.
 
 ## Flags
 
@@ -384,7 +386,7 @@ After writing the artifacts, respond with:
 - Consensus verdict: approved / approved-with-risk / not-approved.
 - One-sentence summary.
 - Remaining risks or open questions.
-- Suggested next command:
+- Suggested next command, with an explicit reminder to run it from the repository root where the artifacts were written:
 
 ```text
 /start-ralph-loop .ralph/<slug>.md
