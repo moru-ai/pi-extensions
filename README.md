@@ -41,6 +41,13 @@ pi update
 | `explorer` | Read-only codebase exploration and search |
 | `general-purpose` | Multi-step research and implementation |
 
+### Skills
+
+| Skill | Description |
+|-------|-------------|
+| `deep-interview` | Socratic interview that lowers ambiguity and saves a clarified transcript |
+| `wt` | Worktree management with optional remote sync |
+
 ### Prompts
 
 | Prompt | Description |
