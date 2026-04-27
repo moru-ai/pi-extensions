@@ -407,6 +407,20 @@ ralph_start({
 
 Before calling `ralph_start`, verify the current pi cwd is the repository root where the `.ralph/` artifacts were written. If cwd is wrong, do not start; tell the user to restart pi from the correct repo root.
 
+## Post-RALPLAN follow-up
+
+After a successful `/ralplan`, if the user says a short follow-up like:
+
+- "start it"
+- "start the loop"
+- "start Ralph"
+- "run Ralph"
+- "execute it"
+
+then treat that as approval to start the most recently created Ralph task from this conversation. Do not re-plan. Read `.ralph/<slug>.md`, confirm it links `.ralph/plans/prd-<slug>.md` and `.ralph/plans/test-spec-<slug>.md`, then call `ralph_start` with the task content.
+
+If there are multiple plausible recent Ralph task files or the cwd does not contain the expected artifacts, ask one clarification question with the likely paths instead of guessing.
+
 ## Scenario handling
 
 Good:
